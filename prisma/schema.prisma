@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model employees {
+  id                               Int               @id @default(autoincrement())
+  contract                         String            @db.VarChar(255)
+  firstName                        String            @db.VarChar(255)
+  lastName                         String            @db.VarChar(255)
+  address                          String?           @db.VarChar(255)
+  ownerId                          Int
+  phone                            String?           @db.VarChar(255)
+  additionalInfo                   String?           @db.VarChar(255)
+  foremanId                        Int
+  berryId                          String            @db.VarChar(255)
+  photoPath                        String?           @db.VarChar(255)
+  contractHash                     String            @db.VarChar(1024)
+  lastNameHash                     String            @db.VarChar(1024)
+  phoneHash                        String?           @db.VarChar(1024)
+  salt                             String            @db.VarChar(255)
+  iv                               String            @db.VarChar(255)
+  users_employees_ownerIdTousers   users             @relation("employees_ownerIdTousers", fields: [ownerId], references: [id], onDelete: NoAction, map: "employees_ibfk_1")
+  users_employees_foremanIdTousers users             @relation("employees_foremanIdTousers", fields: [foremanId], references: [id], onDelete: NoAction, map: "employees_ibfk_2")
+  employees_flags                  employees_flags[]
+  history                          history[]
+  shifts                           shifts[]
+
+  @@index([contractHash], map: "employees_contractHash")
+  @@index([id], map: "employees_flags_flag_id_idx")
+  @@index([foremanId], map: "employees_foreman_fkey")
+  @@index([lastNameHash], map: "employees_lastNameHash")
+  @@index([ownerId], map: "employees_owner_fkey")
+  @@index([phoneHash], map: "employees_phoneHash")
+}
+
+model employees_flags {
+  employeeId Int
+  flagId     Int
+  employees  employees @relation(fields: [employeeId], references: [id], onDelete: Cascade, map: "employees_flags_ibfk_1")
+  flags      flags     @relation(fields: [flagId], references: [id], onDelete: Cascade, map: "employees_flags_ibfk_2")
+
+  @@id([employeeId, flagId])
+  @@unique([employeeId, flagId], map: "employees_flags_flagId_employeeId_unique")
+  @@index([flagId], map: "flagId")
+}
+
+model flags {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  color           String            @db.VarChar(50)
+  ownerId         Int?
+  salt            String?           @db.VarChar(255)
+  iv              String?           @db.VarChar(255)
+  employees_flags employees_flags[]
+  users           users?            @relation(fields: [ownerId], references: [id], map: "flags_ibfk_1")
+
+  @@index([ownerId], map: "owner")
+}
+
+model history {
+  id         Int        @id @default(autoincrement())
+  employeeId Int?
+  productId  Int?
+  amount     String     @db.VarChar(255)
+  dateTime   DateTime   @db.DateTime(0)
+  iv         String?    @db.VarChar(255)
+  salt       String?    @db.VarChar(255)
+  isPaid     Boolean    @default(false)
+  employees  employees? @relation(fields: [employeeId], references: [id], map: "history_ibfk_73")
+  products   products?  @relation(fields: [productId], references: [id], map: "history_ibfk_74")
+
+  @@index([employeeId], map: "history_employeeId_fkey")
+  @@index([productId], map: "history_productId_fkey")
+}
+
+model products {
+  id           Int       @id @default(autoincrement())
+  productName  String    @unique(map: "productName") @db.VarChar(255)
+  productPrice String    @db.VarChar(255)
+  photoPath    String?   @db.VarChar(255)
+  ownerId      Int
+  iv           String?   @db.VarChar(255)
+  salt         String?   @db.VarChar(255)
+  history      history[]
+  users        users     @relation(fields: [ownerId], references: [id], onDelete: NoAction, map: "products_ibfk_1")
+
+  @@index([ownerId], map: "owner")
+}
+
+model roles {
+  id       Int     @id @default(autoincrement())
+  roleName String  @db.VarChar(50)
+  users    users[]
+}
+
+model shifts {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  startTime  DateTime  @db.DateTime(0)
+  endTime    DateTime? @db.DateTime(0)
+  employees  employees @relation(fields: [employeeId], references: [id], onDelete: NoAction, map: "shifts_ibfk_1")
+
+  @@index([employeeId], map: "shifts_employeeId_fkey")
+}
+
+model support {
+  id        Int      @id @default(autoincrement())
+  name      String?  @db.VarChar(50)
+  email     String?  @db.VarChar(50)
+  phone     String?  @db.VarChar(50)
+  message   String?  @db.VarChar(255)
+  userId    Int?
+  solved    Boolean? @default(false)
+  createdAt DateTime @db.DateTime(0)
+  updatedAt DateTime @db.DateTime(0)
+  users     users?   @relation(fields: [userId], references: [id], map: "support_ibfk_1")
+
+  @@index([userId], map: "user")
+}
+
+model users {
+  id                                   Int         @id @default(autoincrement())
+  username                             String      @unique(map: "username") @db.VarChar(255)
+  password                             String      @db.VarChar(100)
+  email                                String?     @unique(map: "email") @db.VarChar(50)
+  firstName                            String      @db.VarChar(255)
+  lastName                             String      @db.VarChar(255)
+  roleId                               Int
+  ownerId                              Int?
+  ownerHash                            String?     @db.VarChar(1024)
+  salt                                 String?     @db.VarChar(255)
+  iv                                   String?     @db.VarChar(255)
+  employees_employees_ownerIdTousers   employees[] @relation("employees_ownerIdTousers")
+  employees_employees_foremanIdTousers employees[] @relation("employees_foremanIdTousers")
+  flags                                flags[]
+  products                             products[]
+  support                              support[]
+  roles                                roles       @relation(fields: [roleId], references: [id], onDelete: NoAction, map: "users_ibfk_73")
+  users                                users?      @relation("usersTousers", fields: [ownerId], references: [id], map: "users_ibfk_74")
+  other_users                          users[]     @relation("usersTousers")
+
+  @@index([ownerId], map: "users_owner_fkey")
+  @@index([roleId], map: "users_role_fkey")
+}
