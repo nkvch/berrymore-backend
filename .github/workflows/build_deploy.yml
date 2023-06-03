@@ -1,0 +1,51 @@
+name: Docker Compose Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: local
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+      REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      MAIL_HOST: ${{ secrets.MAIL_HOST }}
+      MAIL_PORT: ${{ secrets.MAIL_PORT }}
+      MAIL_USER: ${{ secrets.MAIL_USER }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build and push Docker image
+        run: |
+          echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
+          docker rmi -f nkvch/berrymore-backend
+          docker compose build -t nkvch/berrymore-backend .
+          docker compose push nkvch/berrymore-backend
+          docker logout
+
+  deploy:
+    runs-on: aws
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+      REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      MAIL_HOST: ${{ secrets.MAIL_HOST }}
+      MAIL_PORT: ${{ secrets.MAIL_PORT }}
+      MAIL_USER: ${{ secrets.MAIL_USER }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+    steps:
+      - name: Pull and deploy Docker image
+        run: |
+          echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
+          docker compose pull nkvch/berrymore-backend
+          docker compose up -d
+          docker logout
