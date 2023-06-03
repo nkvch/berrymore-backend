@@ -5,8 +5,13 @@ on:
     branches:
       - master
 
+stages:
+  - build
+  - deploy
+
 jobs:
   build:
+    stage: build
     runs-on: local
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -26,12 +31,13 @@ jobs:
         run: |
           whoami
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
-          docker rmi -f nkvch/berrymore-backend
+          docker rmi -f nkvch/berrymore-backend || true
           docker compose build -t nkvch/berrymore-backend .
           docker compose push nkvch/berrymore-backend
           docker logout
 
   deploy:
+    stage: deploy
     runs-on: aws
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
