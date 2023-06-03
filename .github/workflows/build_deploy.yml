@@ -25,6 +25,7 @@ jobs:
       - name: Build and push Docker image
         run: |
           source ~/.bashrc
+          yarn install
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker rmi -f nkvch/berrymore-backend || true
           docker compose build --no-cache
