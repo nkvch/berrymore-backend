@@ -24,7 +24,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          whoami
+          nvm use 16
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker rmi -f nkvch/berrymore-backend || true
           docker compose build

@@ -13,7 +13,7 @@ COPY . .
 RUN yarn build
 
 
-# prod stage
+# prod
 FROM node:18-alpine
 
 WORKDIR /app
