@@ -50,6 +50,6 @@ jobs:
       - name: Pull and deploy Docker image
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
-          docker compose pull nkvch/berrymore-backend
-          docker compose up -d
+          docker-compose pull nkvch/berrymore-backend
+          docker-compose up -d
           docker logout
