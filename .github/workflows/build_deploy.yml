@@ -28,9 +28,8 @@ jobs:
           yarn install
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker rmi -f nkvch/berrymore-backend || true
-          docker compose build --no-cache
-          docker tag $(docker images -q backend) nkvch/berrymore-backend
-          docker compose push
+          docker compose build
+          docker push nkvch/berrymore-backend
           docker logout
 
   deploy:
