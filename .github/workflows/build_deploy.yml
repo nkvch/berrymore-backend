@@ -27,7 +27,7 @@ jobs:
           whoami
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker rmi -f nkvch/berrymore-backend || true
-          docker compose build -t nkvch/berrymore-backend .
+          docker compose build
           docker compose push nkvch/berrymore-backend
           docker logout
 
