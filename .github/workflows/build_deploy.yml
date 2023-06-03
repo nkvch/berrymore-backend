@@ -49,8 +49,7 @@ jobs:
     steps:
       - name: Checkout docker-compose.yml
         uses: actions/checkout@v2
-        with:
-          path: docker-compose.yml
+
       - name: Pull and deploy Docker image
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
