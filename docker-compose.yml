@@ -19,25 +19,8 @@ services:
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-    depends_on:
-      redis:
-        condition: service_healthy
-  redis:
-    image: redis:alpine
-    container_name: redis
-    restart: unless-stopped
-    expose:
-      - 6379
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 1s
-      timeout: 2s
-      retries: 10
 
 volumes:
-  redis-data:
   static_volume:
   media_volume:
 
