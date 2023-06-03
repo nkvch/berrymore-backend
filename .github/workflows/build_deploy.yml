@@ -51,5 +51,5 @@ jobs:
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker pull nkvch/berrymore-backend
-          docker run -d -p 5000:5000 --name backend nkvch/berrymore-backend
+          docker compose up -d
           docker logout
