@@ -54,5 +54,6 @@ jobs:
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker pull nkvch/berrymore-backend
-          docker-compose up --force-recreate -d
+          docker rm -f berrymore-backend || true
+          docker-compose up -d
           docker logout
