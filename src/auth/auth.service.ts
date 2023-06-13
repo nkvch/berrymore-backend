@@ -1,6 +1,6 @@
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { MailerService } from '@nestjs-modules/mailer';
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UseGuards } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
@@ -8,6 +8,12 @@ import * as bcrypt from 'bcryptjs';
 import { prepareEmail } from './mails/prepareEmail';
 import { users } from '@prisma/client';
 import * as crypto from 'crypto';
+import { SigninDto } from './dto/signin.dto';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { EncryptService } from 'src/encrypt/encrypt.service';
+import { UserData } from './interfaces/UserData';
+import { JwtTokenUserData } from './interfaces/JwtTokenUserData';
 
 @Injectable()
 export class AuthService {
@@ -15,11 +21,44 @@ export class AuthService {
     private prisma: PrismaService,
     @InjectRedis() private readonly redis: Redis,
     private readonly mailService: MailerService,
-  ) {}
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+    private readonly encryptService: EncryptService,
+  ) { }
 
-  signin() {
+  async signin(signinDto: SigninDto) {
+    const user = await this.prisma.users.findUnique({
+      where: {
+        username: signinDto.username,
+      },
+      include: {
+        roles: true,
+      },
+    });
+
+    if (!user) {
+      throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+    }
+
+    const isMatch = await bcrypt.compare(signinDto.password, user.password);
+
+    if (!isMatch) {
+      throw new HttpException('Неверный пароль', HttpStatus.BAD_REQUEST);
+    }
+
+    const token = await this.signToken({ id: user.id });
+
+    this.encryptService.generateEncryptKey(user, signinDto.password);
+
+    const { username, email, firstName, lastName, roles } = user;
+
     return {
-      message: 'This is a mock message',
+      token,
+      roleName: roles.roleName,
+      username,
+      email,
+      firstName,
+      lastName,
     };
   }
 
@@ -56,7 +95,10 @@ export class AuthService {
     const user = await this.redis.get(token);
 
     if (!user) {
-      throw new Error('Ссылка для подтверждения недействительна или устарела');
+      throw new HttpException(
+        'Ссылка для подтверждения недействительна или устарела',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const userData = JSON.parse(user) as Omit<users, 'id'>;
@@ -68,5 +110,18 @@ export class AuthService {
     await this.redis.del(token);
 
     return createdUser;
+  }
+
+  signToken(payload: JwtTokenUserData) {
+    return this.jwt.signAsync(payload, {
+      secret: this.config.get('JWT_SECRET'),
+      expiresIn: '1d',
+    });
+  }
+
+  async refreshToken(user: UserData) {
+    const token = await this.signToken({ id: user.id });
+
+    return { token };
   }
 }

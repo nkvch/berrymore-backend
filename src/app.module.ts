@@ -6,11 +6,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule } from '@nestjs/config';
+import { EncryptModule } from './encrypt/encrypt.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: process.env.NODE_ENV === 'dev' ? '.env' : undefined, // docker loads env by itself
+      isGlobal: true,
     }),
     AuthModule,
     UserModule,
@@ -41,6 +43,7 @@ import { ConfigModule } from '@nestjs/config';
         from: 'Berrymore',
       },
     }),
+    EncryptModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
