@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { EmployeeModule } from './employee/employee.module';
+import { EmployeesModule } from './employees/employees.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule } from '@nestjs/config';
 import { EncryptModule } from './encrypt/encrypt.module';
+import { FlagsModule } from './flags/flags.module';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -16,7 +18,7 @@ import { EncryptModule } from './encrypt/encrypt.module';
     }),
     AuthModule,
     UserModule,
-    EmployeeModule,
+    EmployeesModule,
     PrismaModule,
     RedisModule.forRoot({
       config: {
@@ -44,6 +46,8 @@ import { EncryptModule } from './encrypt/encrypt.module';
       },
     }),
     EncryptModule,
+    FlagsModule,
+    S3Module,
   ],
 })
 export class AppModule { }

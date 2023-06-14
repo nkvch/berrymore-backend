@@ -2,17 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient, users } from '@prisma/client';
 import { EncryptService } from 'src/encrypt/encrypt.service';
 import { encryptionConfig } from './encryptionConfig';
+import { TryCatch } from 'src/common/decorators/try-catch.decorator';
 
 export interface PaginateOptions {
   page: number;
   perPage: number;
-};
+}
 
 @Injectable()
 export class PrismaService extends PrismaClient {
-  constructor(
-    private readonly encryptService: EncryptService,
-  ) {
+  constructor(private readonly encryptService: EncryptService) {
     super({
       datasources: {
         db: {
@@ -29,29 +28,61 @@ export class PrismaService extends PrismaClient {
       const cfg = encryptionConfig[model];
 
       if (cfg) {
-        if (action === 'create') {
-          if (await cfg.shouldCrypt(args.data, this)) {
-            const filteredData = Object.fromEntries(
-              Object.entries(args.data).filter(([key]) => cfg.fields.includes(key))
+        if (action === 'create' || action === 'update') {
+          if (await cfg.shouldEncrypt(action, args, this)) {
+            let allData;
+            let ownerId;
+
+            switch (action) {
+              case 'create':
+                ownerId = args.data.ownerId;
+                allData = args.data;
+                break;
+              case 'update':
+                allData = await (
+                  this[model] as any
+                ).findUnique({
+                  where: args.where,
+                  select: Object.fromEntries(
+                    cfg.fields.map((key) => [key, true]),
+                  ),
+                });
+                allData = {
+                  ...allData,
+                  ...args.data,
+                }
+                ownerId = allData?.ownerId;
+                break;
+            }
+
+            const dataToEncrypt = Object.fromEntries(
+              Object.entries(allData).filter(([key]) =>
+                cfg.fields.includes(key),
+              ),
             );
 
-            const encryptedData = this.encrpyt(args.data.ownerId, filteredData);
+            const encryptedData = this.encrpyt(ownerId, dataToEncrypt);
 
             args.data = {
               ...args.data,
               ...encryptedData,
-            }
+            };
           }
-        } else if (action === 'findFirst' || action === 'findUnique' || action === 'findMany') {
-          if (!params.args.include) {
+        } else if (
+          action === 'findFirst' ||
+          action === 'findUnique' ||
+          action === 'findMany'
+        ) {
+          if (params.args && !params.args.include && params.args.select) {
             params.args = {
               ...args,
               select: {
-                ...(args.select),
+                ...args.select,
                 iv: true,
                 salt: true,
-              }
-            }
+                ownerId: true,
+              },
+            };
           }
         }
       }
@@ -61,46 +92,54 @@ export class PrismaService extends PrismaClient {
       if (result === null) return result;
 
       if (cfg) {
-        if (action === 'findUnique' || action === 'findFirst') {
-          if (await cfg.shouldCrypt(result, this)) {
+        if (action === 'findUnique' || action === 'findFirst' || action === 'update' || action === 'delete') {
+          if (cfg.shouldDecrypt(result)) {
             const fields = [...cfg.fields, 'iv', 'salt'];
 
             const filteredData = Object.fromEntries(
-              Object.entries(result).filter(([key]) => fields.includes(key))
+              Object.entries(result).filter(([key]) => fields.includes(key)),
             ) as Record<string, string>;
 
-            const decryptedData = this.encryptService.decryptData(filteredData, result.ownerId);
+            const decryptedData = this.encryptService.decryptData(
+              filteredData,
+              result.ownerId,
+            );
 
             result = {
               ...result,
               ...decryptedData,
-            }
+            };
 
             delete result.iv;
             delete result.salt;
           }
         } else if (action === 'findMany') {
-          result = await Promise.all(result.map(async (item: any) => {
-            if (await cfg.shouldCrypt(item, this)) {
-              const fields = [...cfg.fields, 'iv', 'salt'];
+          result = await Promise.all(
+            result.map((item: any) => {
+              if (cfg.shouldDecrypt(item)) {
+                const fields = [...cfg.fields, 'iv', 'salt'];
 
-              const filteredData = Object.fromEntries(
-                Object.entries(item).filter(([key]) => fields.includes(key))
-              ) as Record<string, string>;
+                const filteredData = Object.fromEntries(
+                  Object.entries(item).filter(([key]) => fields.includes(key)),
+                ) as Record<string, string>;
 
-              const decryptedData = this.encryptService.decryptData(filteredData, item.ownerId);
+                const decryptedData = this.encryptService.decryptData(
+                  filteredData,
+                  item.ownerId,
+                );
 
-              item = {
-                ...item,
-                ...decryptedData,
+                item = {
+                  ...item,
+                  ...decryptedData,
+                };
+
+                delete item.iv;
+                delete item.salt;
               }
 
-              delete item.iv;
-              delete item.salt;
-            }
-
-            return item;
-          }));
+              return item;
+            }),
+          );
         }
       }
 
@@ -138,6 +177,6 @@ export class PrismaService extends PrismaClient {
       totalPages,
       totalItems: count,
       currentPage: page,
-    }
-  }
+    };
+  };
 }

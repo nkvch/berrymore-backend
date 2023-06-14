@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { roles, users } from '@prisma/client';
 import * as crypto from 'crypto';
@@ -62,16 +62,16 @@ export class EncryptService {
     const hash = this.userHashMap[userId];
 
     if (!hash) {
-      throw new Error('No hash for user');
+      throw new HttpException('Ошибка авторизации', HttpStatus.UNAUTHORIZED);
     }
 
     const iv = crypto.randomBytes(16);
     const salt = crypto.randomBytes(64);
 
-    const key = crypto.pbkdf2Sync(hash, salt, 10000, 32, "sha256");
+    const key = crypto.pbkdf2Sync(hash, salt, 10000, 32, 'sha256');
 
     for (const _key in data) {
-      const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+      const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 
       const value = data[_key];
 
@@ -79,18 +79,15 @@ export class EncryptService {
         continue;
       }
 
-      const encrypted = Buffer.concat([
-        cipher.update(value),
-        cipher.final(),
-      ]);
+      const encrypted = Buffer.concat([cipher.update(value), cipher.final()]);
 
-      data[_key] = encrypted.toString("hex");
+      data[_key] = encrypted.toString('hex');
     }
 
     return {
-      iv: iv.toString("hex"),
-      salt: salt.toString("hex"),
       ...data,
+      iv: iv.toString('hex'),
+      salt: salt.toString('hex'),
     };
   }
 
@@ -98,20 +95,20 @@ export class EncryptService {
     const hash = this.userHashMap[userId];
 
     if (!hash) {
-      throw new Error('No hash for user');
+      throw new HttpException('Ошибка авторизации', HttpStatus.UNAUTHORIZED);
     }
 
-    const iv = Buffer.from(data.iv, "hex");
-    const salt = Buffer.from(data.salt, "hex");
+    const iv = Buffer.from(data.iv, 'hex');
+    const salt = Buffer.from(data.salt, 'hex');
 
-    const key = crypto.pbkdf2Sync(hash, salt, 10000, 32, "sha256");
+    const key = crypto.pbkdf2Sync(hash, salt, 10000, 32, 'sha256');
 
     for (const _key in data) {
-      if (_key === "iv" || _key === "salt") {
+      if (_key === 'iv' || _key === 'salt') {
         continue;
       }
 
-      const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 
       const value = data[_key];
 
@@ -120,7 +117,7 @@ export class EncryptService {
       }
 
       const decrypted = Buffer.concat([
-        decipher.update(Buffer.from(value, "hex")),
+        decipher.update(Buffer.from(value, 'hex')),
         decipher.final(),
       ]);
 
@@ -162,10 +159,7 @@ export class EncryptService {
       ivForOwnerHash,
     );
 
-    const encrypted = Buffer.concat([
-      cipher.update(ownerHash),
-      cipher.final(),
-    ]);
+    const encrypted = Buffer.concat([cipher.update(ownerHash), cipher.final()]);
 
     return encrypted.toString('hex');
   }

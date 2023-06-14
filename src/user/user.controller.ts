@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { JwtGuard, RestrictRolesGuard } from 'src/auth/guards';
 import { UserData } from 'src/auth/interfaces/UserData';
@@ -8,6 +8,7 @@ import { users } from '@prisma/client';
 import { IdParam } from 'src/common/decorators/id-param.decorator';
 import { PaginationParams } from 'src/common/decorators/pagination-query-params.decorator';
 import { PaginateOptions } from 'src/prisma/prisma.service';
+import { UpdateForemanDto } from './dto/update-foreman.dto';
 
 @Controller('users')
 export class UserController {
@@ -29,5 +30,21 @@ export class UserController {
   @Get('foremen')
   getForemen(@GetUser('ownerId') ownerId: UserData['ownerId'], @PaginationParams() pagiantionParam: PaginateOptions) {
     return this.userService.getForemen(ownerId, pagiantionParam);
+  }
+
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @Put('foremen/:id')
+  updateForeman(
+    @Body() foremanDto: UpdateForemanDto,
+    @GetUser('ownerId') ownerId: UserData['ownerId'],
+    @IdParam() foremanId: users['id'],
+  ) {
+    return this.userService.updateForeman(foremanId, foremanDto, ownerId);
+  }
+
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @Delete('foremen/:id')
+  deleteForeman(@GetUser('ownerId') ownerId: UserData['ownerId'], @IdParam() foremanId: users['id']) {
+    return this.userService.deleteForeman(foremanId, ownerId);
   }
 }
