@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserData } from 'src/auth/interfaces/UserData';
 import { GetLatestStatsDto } from './dto/get-latest-stats.dto';
 import { Prisma, employees, history, products } from '@prisma/client';
+import { CalcEmployeeDto } from './dto/calc-employee.dto';
 
 export interface Stats {
   top10Employees: {
@@ -14,6 +15,17 @@ export interface Stats {
   totalAmount: number;
 }
 
+export interface CalcEmployeeData {
+  totalAmount: number;
+  totalPay: number;
+  products: {
+    id: number;
+    name: string;
+    amount: number;
+    pay: number;
+  }[];
+}
+
 type HistoryWithNumberAmount = Omit<history, 'amount'> & {
   amount: number;
 };
@@ -21,6 +33,14 @@ type HistoryWithNumberAmount = Omit<history, 'amount'> & {
 type HistoryWithProductsAndEmployees = HistoryWithNumberAmount & {
   products: products;
   employees: employees;
+};
+
+type HistoryWithProductsPriceAndName = history & {
+  products: {
+    id: number;
+    productPrice: number;
+    productName: string;
+  }
 };
 
 @Injectable()
@@ -59,6 +79,8 @@ export class StatsService {
       },
     }, user);
 
+    console.log(latestHistory);
+
     const top10Employees = latestHistory
       .reduce((acc: Stats['top10Employees'], history) => {
         const employee = history.employees;
@@ -89,5 +111,76 @@ export class StatsService {
       top10Employees,
       totalAmount,
     };
+  }
+
+  async calcEmployee(employeeId: number, calcEmployeeDto: CalcEmployeeDto, user: UserData) {
+    const { productId, fromDateTime, toDateTime, calcAll } = calcEmployeeDto;
+
+    const where: Prisma.historyWhereInput = {
+      employeeId,
+      isPaid: false,
+    };
+
+    if (calcAll) {
+      delete where.isPaid;
+    }
+
+    if (productId) {
+      where.productId = productId;
+    }
+
+    if (fromDateTime) {
+      where.dateTime = {
+        gte: fromDateTime,
+      };
+    }
+
+    if (toDateTime) {
+      where.dateTime = {
+        ...(where.dateTime as Prisma.DateTimeFilter || {}),
+        lte: toDateTime,
+      };
+    }
+
+    const history: HistoryWithProductsPriceAndName[] = await this.prisma.findManyPrivately('history', {
+      where,
+      include: {
+        products: {
+          select: {
+            id: true,
+            productPrice: true,
+            productName: true,
+          }
+        }
+      },
+    }, user);
+
+    const calcEmployeeData: CalcEmployeeData = {
+      totalAmount: 0,
+      totalPay: 0,
+      products: [],
+    };
+
+    history.forEach(history => {
+      const product = history.products;
+      const productIndex = calcEmployeeData.products.findIndex(calcProduct => calcProduct.id === product.id);
+
+      if (productIndex === -1) {
+        calcEmployeeData.products.push({
+          id: product.id,
+          name: product.productName,
+          amount: Number(history.amount),
+          pay: Number(history.amount) * Number(product.productPrice),
+        });
+      } else {
+        calcEmployeeData.products[productIndex].amount += Number(history.amount);
+        calcEmployeeData.products[productIndex].pay += Number(history.amount) * Number(product.productPrice);
+      }
+
+      calcEmployeeData.totalAmount += Number(history.amount);
+      calcEmployeeData.totalPay += Number(history.amount) * Number(product.productPrice);
+    });
+
+    return calcEmployeeData;
   }
 }

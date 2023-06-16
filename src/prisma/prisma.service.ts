@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient, users } from '@prisma/client';
 import { EncryptService } from 'src/encrypt/encrypt.service';
 import { encryptionConfig } from './encryptionConfig';
+import { mappersConfig } from './mappersConfig';
 import { UserData } from 'src/auth/interfaces/UserData';
 
 export interface PaginateOptions {
@@ -77,17 +78,12 @@ export class PrismaService extends PrismaClient {
           action === 'findUnique' ||
           action === 'findMany'
         ) {
-          if (params.args && !params.args.include && params.args.select) {
-            params.args = {
-              ...args,
-              select: {
-                ...args.select,
-                iv: true,
-                salt: true,
-                ownerId: true,
-              },
-            };
-          }
+          const modifiedArgs = this.includeEncryptionAttributesWhereNeeded(
+            model,
+            args,
+          );
+
+          params.args = modifiedArgs;
         }
       }
 
@@ -97,8 +93,46 @@ export class PrismaService extends PrismaClient {
 
       result = await this.decryptEntity(result, model);
 
+      result = this.mapEntity(result, model);
+
       return result;
     });
+  }
+
+  includeEncryptionAttributesWhereNeeded = function (
+    model: Prisma.ModelName,
+    args: any,
+  ) {
+    const cfg = encryptionConfig[model];
+
+    if (cfg) {
+      if (args) {
+        if (args.select) {
+          args.select = {
+            ...args.select,
+            iv: true,
+            salt: true,
+            ownerId: true,
+          };
+
+          for (const key in args.select) {
+            args.select[key] = this.includeEncryptionAttributesWhereNeeded(
+              key as Prisma.ModelName,
+              args.select[key],
+            );
+          }
+        } else if (args.include) {
+          for (const key in args.include) {
+            args.include[key] = this.includeEncryptionAttributesWhereNeeded(
+              key as Prisma.ModelName,
+              args.include[key],
+            );
+          }
+        }
+      }
+    }
+
+    return args;
   }
 
   decryptEntity = async function (
@@ -139,6 +173,37 @@ export class PrismaService extends PrismaClient {
 
       if (includedCfg) {
         entity[key] = await this.decryptEntity(entity[key], key);
+      }
+    }
+
+    return entity;
+  }
+
+  mapEntity = function (entity: any, modelName: string) {
+    const cfg = mappersConfig[modelName];
+
+    if (Array.isArray(entity)) {
+      return entity.map((item) => this.mapEntity(item, modelName));
+
+    }
+
+    if (cfg) {
+      const fields = [...cfg.fields];
+
+      const filteredData = Object.fromEntries(
+        Object.entries(entity).filter(([key]) => fields.includes(key)),
+      ) as Record<string, string>;
+
+      for (const key in filteredData) {
+        entity[key] = cfg.fieldsMappers[key](entity[key]);
+      }
+    }
+
+    for (const key in entity) {
+      const includedCfg = mappersConfig[key];
+
+      if (includedCfg) {
+        entity[key] = this.mapEntity(entity[key], key);
       }
     }
 

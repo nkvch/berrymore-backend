@@ -72,7 +72,7 @@ model history {
   iv         String?    @db.VarChar(255)
   salt       String?    @db.VarChar(255)
   isPaid     Boolean    @default(false)
-  ownerId    Int
+  ownerId    Int?
   employees  employees? @relation(fields: [employeeId], references: [id], map: "history_ibfk_73")
   products   products?  @relation(fields: [productId], references: [id], map: "history_ibfk_74")
 
