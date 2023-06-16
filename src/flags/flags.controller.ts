@@ -17,19 +17,19 @@ export class FlagsController {
 
   @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
   @Post()
-  async create(@Body() flagDto: FlagDto, @GetUser('ownerId') ownerId: UserData['ownerId']) {
-    return this.flagsService.create(flagDto, ownerId);
+  async create(@Body() flagDto: FlagDto, @GetUser() user: UserData) {
+    return this.flagsService.create(flagDto, user);
   }
 
   @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
   @Put(':id')
-  async update(@IdParam() id: number, @Body() flagDto: FlagDto, @GetUser('ownerId') ownerId: UserData['ownerId']) {
-    return this.flagsService.update(id, flagDto, ownerId);
+  async update(@IdParam() id: number, @Body() flagDto: FlagDto, @GetUser() user: UserData) {
+    return this.flagsService.update(id, flagDto, user);
   }
 
   @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
   @Delete(':id')
-  async delete(@IdParam() id: number, @GetUser('ownerId') ownerId: UserData['ownerId']) {
-    return this.flagsService.delete(id, ownerId);
+  async delete(@IdParam() id: number, @GetUser() user: UserData) {
+    return this.flagsService.delete(id, user);
   }
 }

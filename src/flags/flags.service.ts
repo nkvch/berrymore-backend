@@ -12,59 +12,28 @@ export class FlagsService {
     return this.prisma.flags.findMany();
   }
 
-  async create(flagDto: FlagDto, ownerId: UserData['ownerId']): Promise<flags> {
-    return this.prisma.flags.create({
-      data: {
-        ...flagDto,
-        ownerId,
-      }
-    });
+  async create(flagDto: FlagDto, user: UserData): Promise<flags> {
+    return this.prisma.createPrivately('flags', {
+      data: flagDto,
+    }, user);
   }
 
-  async update(flagId: flags['id'], flagDto: FlagDto, ownerId: UserData['ownerId']): Promise<flags> {
-    const flag = await this.prisma.flags.findFirst({
-      where: {
-        id: flagId,
-        ownerId,
-      }
-    });
-
-    if (!flag) {
-      throw new HttpException(
-        'Флаг не найден',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    return this.prisma.flags.update({
+  async update(flagId: flags['id'], flagDto: FlagDto, user: UserData) {
+    return this.prisma.updatePrivately('flags', {
       where: {
         id: flagId,
       },
       data: {
         ...flagDto,
       }
-    });
+    }, user);
   }
 
-  async delete(flagId: flags['id'], ownerId: UserData['ownerId']): Promise<flags> {
-    const flag = await this.prisma.flags.findFirst({
-      where: {
-        id: flagId,
-        ownerId,
-      }
-    });
-
-    if (!flag) {
-      throw new HttpException(
-        'Флаг не найден',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    return this.prisma.flags.delete({
+  async delete(flagId: flags['id'], user: UserData): Promise<flags> {
+    return this.prisma.deletePrivately('flags', {
       where: {
         id: flagId,
       }
-    });
+    }, user);
   }
 }

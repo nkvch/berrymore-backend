@@ -9,6 +9,9 @@ import { ConfigModule } from '@nestjs/config';
 import { EncryptModule } from './encrypt/encrypt.module';
 import { FlagsModule } from './flags/flags.module';
 import { S3Module } from './s3/s3.module';
+import { ProductsModule } from './products/products.module';
+import { HistoryModule } from './history/history.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -48,6 +51,9 @@ import { S3Module } from './s3/s3.module';
     EncryptModule,
     FlagsModule,
     S3Module,
+    ProductsModule,
+    HistoryModule,
+    StatsModule,
   ],
 })
 export class AppModule { }

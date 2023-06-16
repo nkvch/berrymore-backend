@@ -1,12 +1,13 @@
 import { IsArray, IsNotEmpty, IsNumberString, IsOptional, IsPhoneNumber, IsString } from "class-validator";
 import { IdsList } from "src/common/decorators/ids-list.decorator";
+import { NumberFromString } from "src/common/decorators/number-from-string.decorator";
 
-export class AddEmployeeDto {
+export class EmployeeDto {
   @IsNotEmpty({ message: 'Имя не должно быть пустым' })
   firstName: string;
   @IsNotEmpty({ message: 'Фамилия не должна быть пустой' })
   lastName: string;
-  @IsNumberString({}, { message: 'Неправильно указан бригадир' })
+  @NumberFromString({ message: 'Неправильно указан бригадир' })
   @IsNotEmpty({ message: 'Не указан бригадир' })
   foremanId: number;
   @IsString({ message: 'Неправильно указан адрес' })
@@ -15,8 +16,7 @@ export class AddEmployeeDto {
   phone: string;
   @IsString({ message: 'Неправильно указан контракт' })
   contract: string;
-  @IsArray({ message: 'Неправильно указаны флаги' })
-  @IdsList()
+  @IdsList({ message: 'Неправильно указаны флаги' })
   flags: number[];
   @IsOptional()
   additionalInfo: string;

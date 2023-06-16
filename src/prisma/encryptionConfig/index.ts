@@ -36,7 +36,7 @@ export const encryptionConfig: EncryptionConfig = {
         throw new HttpException(
           'Не указан id пользователя',
           HttpStatus.BAD_REQUEST,
-        )
+        );
       }
 
       let isForeman;
@@ -49,21 +49,20 @@ export const encryptionConfig: EncryptionConfig = {
               id: data.roleId as number,
             },
           }));
-          break
+          break;
         case 'update':
           isForeman = !!(await prisma.users.findFirst({
             where: {
               id: where.id,
               roles: {
-                roleName: 'foreman'
-              }
-            }
+                roleName: 'foreman',
+              },
+            },
           }));
-          break
+          break;
         default:
           isForeman = false;
       }
-
 
       return isForeman;
     },
@@ -77,11 +76,45 @@ export const encryptionConfig: EncryptionConfig = {
   flags: {
     shouldEncrypt: () => Promise.resolve(true),
     fields: ['name', 'color'],
-    shouldDecrypt: () => true,
+    shouldDecrypt: (data: Record<string, string | number>) => {
+      if (!data) return false;
+
+      return !!data.iv && !!data.salt;
+    },
   },
   employees: {
     shouldEncrypt: () => Promise.resolve(true),
-    fields: ['firstName', 'lastName', 'photoPath', 'contract', 'address', 'phone', 'additionalInfo'],
-    shouldDecrypt: () => true,
+    fields: [
+      'firstName',
+      'lastName',
+      'photoPath',
+      'contract',
+      'address',
+      'phone',
+      'additionalInfo',
+    ],
+    shouldDecrypt: (data: Record<string, string | number>) => {
+      if (!data) return false;
+
+      return !!data.iv && !!data.salt;
+    },
   },
+  products: {
+    shouldEncrypt: () => Promise.resolve(true),
+    fields: ['productName', 'productPrice', 'photoPath'],
+    shouldDecrypt: (data: Record<string, string | number>) => {
+      if (!data) return false;
+
+      return !!data.iv && !!data.salt;
+    },
+  },
+  history: {
+    shouldEncrypt: () => Promise.resolve(true),
+    fields: ['amount'],
+    shouldDecrypt: (data: Record<string, string | number>) => {
+      if (!data) return false;
+
+      return !!data.iv && !!data.salt;
+    }
+  }
 };
