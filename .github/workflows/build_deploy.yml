@@ -66,5 +66,5 @@ jobs:
         run: |
           echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
           docker-compose pull --ignore-pull-failures
-          docker-compose up -d --force-recreate --pull
+          docker-compose up -d --remove-orphans --force-recreate --pull=always
           docker logout
