@@ -124,4 +124,29 @@ export class AuthService {
 
     return { token };
   }
+
+  async getMe(user: UserData) {
+    const userData = await this.prisma.users.findUnique({
+      where: {
+        id: user.id,
+      },
+      include: {
+        roles: true,
+      },
+    });
+
+    if (!userData) {
+      throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+    }
+
+    const { username, email, firstName, lastName, roles: { roleName } } = userData;
+
+    return {
+      username,
+      email,
+      firstName,
+      lastName,
+      roleName,
+    };
+  }
 }

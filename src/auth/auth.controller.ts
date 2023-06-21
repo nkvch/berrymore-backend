@@ -30,4 +30,10 @@ export class AuthController {
   refresh(@GetUser() user: UserData) {
     return this.authService.refreshToken(user);
   }
+
+  @UseGuards(JwtGuard)
+  @Get('me')
+  me(@GetUser() user: UserData) {
+    return this.authService.getMe(user);
+  }
 }

@@ -18,6 +18,12 @@ jobs:
       MAIL_USER: ${{ secrets.MAIL_USER }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+      SALT_FOR_OWNER_HASH: ${{ secrets.SALT_FOR_OWNER_HASH }}
+      IV_FOR_OWNER_HASH: ${{ secrets.IV_FOR_OWNER_HASH }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -46,6 +52,12 @@ jobs:
       MAIL_USER: ${{ secrets.MAIL_USER }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+      SALT_FOR_OWNER_HASH: ${{ secrets.SALT_FOR_OWNER_HASH }}
+      IV_FOR_OWNER_HASH: ${{ secrets.IV_FOR_OWNER_HASH }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
       - name: Checkout docker-compose.yml
         uses: actions/checkout@v2
