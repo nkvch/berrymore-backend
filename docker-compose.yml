@@ -2,7 +2,7 @@ version: '3'
 services:
   backend:
     build: .
-    image: nkvch/berrymore-backend
+    image: nkvch/berrymore-backend:latest
     container_name: backend
     restart: unless-stopped
     environment:
@@ -14,6 +14,12 @@ services:
       - MAIL_USER=${MAIL_USER}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - FRONTEND_URL=${FRONTEND_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - SALT_FOR_OWNER_HASH=${SALT_FOR_OWNER_HASH}
+      - IV_FOR_OWNER_HASH=${IV_FOR_OWNER_HASH}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - 5000:5000
     volumes:
