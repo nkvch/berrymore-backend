@@ -1,4 +1,5 @@
 import { IsNotEmpty, Length, IsOptional } from 'class-validator';
+import { EmptyStringToUndefined } from 'src/common/decorators/empty-string-to-undefined.decorator';
 
 export class AddForemanDto {
   @IsNotEmpty({ message: 'Имя не должно быть пустым' })
@@ -6,8 +7,10 @@ export class AddForemanDto {
   @IsNotEmpty({ message: 'Фамилия не должна быть пустой' })
   lastName: string;
   @IsOptional()
+  @EmptyStringToUndefined()
   email: string;
   @IsOptional()
+  @EmptyStringToUndefined()
   phone: string;
   @IsNotEmpty({ message: 'Имя пользователя не должно быть пустым' })
   username: string;

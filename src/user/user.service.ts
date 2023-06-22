@@ -42,6 +42,7 @@ export class UserService {
 
       return newForeman;
     } catch (error) {
+      console.log(error);
       throw new HttpException(
         'Пользователь с таким именем уже существует',
         HttpStatus.BAD_REQUEST,
