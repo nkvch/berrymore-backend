@@ -5,14 +5,17 @@ import { FlagDto } from './dto/flag-dto';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { UserData } from 'src/auth/interfaces/UserData';
 import { IdParam } from 'src/common/decorators/id-param.decorator';
+import { PaginationParams } from 'src/common/decorators/pagination-query-params.decorator';
+import { PaginateOptions } from 'src/prisma/prisma.service';
 
 @Controller('flags')
 export class FlagsController {
   constructor(private readonly flagsService: FlagsService) { }
 
+  @UseGuards(JwtGuard)
   @Get()
-  async findAll() {
-    return this.flagsService.findAll();
+  async findAll(@PaginationParams() pagOpts: PaginateOptions, @GetUser() user: UserData) {
+    return this.flagsService.findAll(pagOpts, user);
   }
 
   @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))

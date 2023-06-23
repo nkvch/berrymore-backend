@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PaginateOptions, PrismaService } from '../prisma/prisma.service';
 import { flags } from '@prisma/client';
 import { FlagDto } from './dto/flag-dto';
 import { UserData } from 'src/auth/interfaces/UserData';
@@ -8,8 +8,8 @@ import { UserData } from 'src/auth/interfaces/UserData';
 export class FlagsService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async findAll(): Promise<flags[]> {
-    return this.prisma.flags.findMany();
+  async findAll(pagOpts: PaginateOptions, user: UserData) {
+    return this.prisma.paginatePrivately('flags', pagOpts, {}, user);
   }
 
   async create(flagDto: FlagDto, user: UserData): Promise<flags> {

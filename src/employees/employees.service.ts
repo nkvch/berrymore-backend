@@ -41,6 +41,16 @@ export class EmployeesService {
             connect: flags.map(flag => ({ id: flag })),
           }
         } as any,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          berryId: true,
+          contract: true,
+          phone: true,
+          address: true,
+          additionalInfo: true,
+        }
       }, user);
     } catch (err) {
       if (photoPath) {
@@ -83,8 +93,24 @@ export class EmployeesService {
 
     return this.prisma.paginatePrivately('employees', pagOpts, {
       where,
-      include: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        berryId: true,
+        contract: true,
+        phone: true,
+        address: true,
+        additionalInfo: true,
+        photoPath: true,
         flags: true,
+        foreman: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        }
       }
     }, user, { foremanLimited: true });
   }
@@ -157,6 +183,25 @@ export class EmployeesService {
       console.error(err);
       throw new HttpException('Ошибка при обновлении сотрудника', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  async deleteEmployee(id: number, user: UserData) {
+    const deletedEmployee = await this.prisma.deletePrivately('employees', {
+      where: {
+        id,
+      },
+      select: {
+        firstName: true,
+        lastName: true,
+        photoPath: true,
+      },
+    }, user, { foremanLimited: true });
+
+    if (deletedEmployee.photoPath) {
+      await this.s3.deleteFromS3(deletedEmployee.photoPath);
+    }
+
+    return deletedEmployee;
   }
 
   async bulkUpdateEmployeesFlags(employeeDto: BulkUpdateEmployeesDto, user: UserData) {

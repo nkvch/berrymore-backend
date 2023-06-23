@@ -166,6 +166,7 @@ export class PrismaService extends PrismaClient {
 
       delete entity.iv;
       delete entity.salt;
+      delete entity.ownerId;
     }
 
     for (const key in entity) {

@@ -73,6 +73,15 @@ export const encryptionConfig: EncryptionConfig = {
       return !!data.iv && !!data.salt;
     },
   },
+  foreman: {
+    shouldEncrypt: () => Promise.resolve(true),
+    fields: ['firstName', 'lastName'],
+    shouldDecrypt: (data: Record<string, string | number>) => {
+      if (!data) return false;
+
+      return !!data.iv && !!data.salt;
+    }
+  },
   flags: {
     shouldEncrypt: () => Promise.resolve(true),
     fields: ['name', 'color'],

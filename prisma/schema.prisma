@@ -8,28 +8,28 @@ datasource db {
 }
 
 model employees {
-  id                               Int       @id @default(autoincrement())
-  contract                         String    @db.VarChar(255)
-  firstName                        String    @db.VarChar(255)
-  lastName                         String    @db.VarChar(255)
-  address                          String?   @db.VarChar(255)
-  ownerId                          Int
-  phone                            String?   @db.VarChar(255)
-  additionalInfo                   String?   @db.VarChar(255)
-  foremanId                        Int
-  berryId                          String    @db.VarChar(255)
-  photoPath                        String?   @db.VarChar(255)
-  contractHash                     String    @db.VarChar(1024)
-  lastNameHash                     String    @db.VarChar(1024)
-  phoneHash                        String?   @db.VarChar(1024)
-  salt                             String    @db.VarChar(255)
-  iv                               String    @db.VarChar(255)
-  users_employees_ownerIdTousers   users     @relation("employees_ownerIdTousers", fields: [ownerId], references: [id], onDelete: NoAction, map: "employees_ibfk_1")
-  users_employees_foremanIdTousers users     @relation("employees_foremanIdTousers", fields: [foremanId], references: [id], onDelete: NoAction, map: "employees_ibfk_2")
+  id                             Int       @id @default(autoincrement())
+  contract                       String    @db.VarChar(255)
+  firstName                      String    @db.VarChar(255)
+  lastName                       String    @db.VarChar(255)
+  address                        String?   @db.VarChar(255)
+  ownerId                        Int
+  phone                          String?   @db.VarChar(255)
+  additionalInfo                 String?   @db.VarChar(255)
+  foremanId                      Int
+  berryId                        String    @db.VarChar(255)
+  photoPath                      String?   @db.VarChar(255)
+  contractHash                   String    @db.VarChar(1024)
+  lastNameHash                   String    @db.VarChar(1024)
+  phoneHash                      String?   @db.VarChar(1024)
+  salt                           String    @db.VarChar(255)
+  iv                             String    @db.VarChar(255)
+  users_employees_ownerIdTousers users     @relation("employees_ownerIdTousers", fields: [ownerId], references: [id], onDelete: NoAction, map: "employees_ibfk_1")
+  foreman                        users     @relation("employees_foremanIdTousers", fields: [foremanId], references: [id], map: "employees_ibfk_2")
   // employees_flags                  employees_flags[]
-  history                          history[]
-  shifts                           shifts[]
-  flags                            flags[]   @relation("employees_flags")
+  history                        history[]
+  shifts                         shifts[]
+  flags                          flags[]   @relation("employees_flags")
 
   @@index([contractHash], map: "employees_contractHash")
   @@index([id], map: "employees_flags_flag_id_idx")

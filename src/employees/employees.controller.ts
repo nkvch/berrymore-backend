@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { EmployeesService } from "./employees.service";
 import { JwtGuard, RestrictRolesGuard } from "src/auth/guards";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -52,5 +52,11 @@ export class EmployeesController {
   @UseInterceptors(FileInterceptor('photo'))
   async updateEmployee(@IdParam() id: number, @Body() updateEmployeeDto: EmployeeDto, @GetUser() user: UserData, @UploadedFile() photo: Express.Multer.File) {
     return this.employeesService.updateEmployee(id, updateEmployeeDto, user, photo);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  async deleteEmployee(@IdParam() id: number, @GetUser() user: UserData) {
+    return this.employeesService.deleteEmployee(id, user);
   }
 }
