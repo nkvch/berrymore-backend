@@ -12,6 +12,7 @@ import { S3Module } from './s3/s3.module';
 import { ProductsModule } from './products/products.module';
 import { HistoryModule } from './history/history.module';
 import { StatsModule } from './stats/stats.module';
+import { ShiftsModule } from './shifts/shifts.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { StatsModule } from './stats/stats.module';
     ProductsModule,
     HistoryModule,
     StatsModule,
+    ShiftsModule,
   ],
 })
 export class AppModule { }

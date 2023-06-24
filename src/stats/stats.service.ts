@@ -79,8 +79,6 @@ export class StatsService {
       },
     }, user);
 
-    console.log(latestHistory);
-
     const top10Employees = latestHistory
       .reduce((acc: Stats['top10Employees'], history) => {
         const employee = history.employees;

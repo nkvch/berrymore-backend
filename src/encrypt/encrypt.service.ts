@@ -116,12 +116,19 @@ export class EncryptService {
         continue;
       }
 
-      const decrypted = Buffer.concat([
-        decipher.update(Buffer.from(value, 'hex')),
-        decipher.final(),
-      ]);
+      try {
+        const decrypted = Buffer.concat([
+          decipher.update(Buffer.from(value, 'hex')),
+          decipher.final(),
+        ]);
 
-      data[_key] = decrypted.toString();
+        data[_key] = decrypted.toString();
+      } catch (e) {
+        console.log(`error while decrypting ${data} ${_key}`)
+        console.log('decryptData', e);
+      }
+
+
     }
 
     delete data.iv;

@@ -7,4 +7,4 @@ export class BulkUpdateEmployeesDto {
   setFlags: number[];
   @IsArray({ message: 'Неправильно указаны флаги' })
   removeFlags: number[];
-}
+};

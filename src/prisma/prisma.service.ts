@@ -4,6 +4,7 @@ import { EncryptService } from 'src/encrypt/encrypt.service';
 import { encryptionConfig } from './encryptionConfig';
 import { mappersConfig } from './mappersConfig';
 import { UserData } from 'src/auth/interfaces/UserData';
+import * as util from 'util';
 
 export interface PaginateOptions {
   page: number;
@@ -32,8 +33,8 @@ export class PrismaService extends PrismaClient {
 
       const cfg = encryptionConfig[model];
 
-      if (cfg) {
-        if (action === 'create' || action === 'update') {
+      if (action === 'create' || action === 'update') {
+        if (cfg) {
           if (await cfg.shouldEncrypt(action, args, this)) {
             let allData;
             let ownerId;
@@ -53,8 +54,8 @@ export class PrismaService extends PrismaClient {
                   ),
                 });
                 allData = {
-                  ...allData,
                   ...args.data,
+                  ...allData,
                 }
                 ownerId = allData?.ownerId;
                 break;
@@ -73,18 +74,18 @@ export class PrismaService extends PrismaClient {
               ...encryptedData,
             };
           }
-        } else if (
-          action === 'findFirst' ||
-          action === 'findUnique' ||
-          action === 'findMany'
-        ) {
-          const modifiedArgs = this.includeEncryptionAttributesWhereNeeded(
-            model,
-            args,
-          );
-
-          params.args = modifiedArgs;
         }
+      } else if (
+        action === 'findFirst' ||
+        action === 'findUnique' ||
+        action === 'findMany'
+      ) {
+        const modifiedArgs = this.includeEncryptionAttributesWhereNeeded(
+          model,
+          args,
+        );
+
+        params.args = modifiedArgs;
       }
 
       let result = await next(params);
@@ -114,20 +115,24 @@ export class PrismaService extends PrismaClient {
             salt: true,
             ownerId: true,
           };
+        }
+      }
+    }
 
-          for (const key in args.select) {
-            args.select[key] = this.includeEncryptionAttributesWhereNeeded(
-              key as Prisma.ModelName,
-              args.select[key],
-            );
-          }
-        } else if (args.include) {
-          for (const key in args.include) {
-            args.include[key] = this.includeEncryptionAttributesWhereNeeded(
-              key as Prisma.ModelName,
-              args.include[key],
-            );
-          }
+    if (args) {
+      if (args.select) {
+        for (const key in args.select) {
+          args.select[key] = this.includeEncryptionAttributesWhereNeeded(
+            key as Prisma.ModelName,
+            args.select[key],
+          );
+        }
+      } else if (args.include) {
+        for (const key in args.include) {
+          args.include[key] = this.includeEncryptionAttributesWhereNeeded(
+            key as Prisma.ModelName,
+            args.include[key],
+          );
         }
       }
     }
@@ -154,6 +159,8 @@ export class PrismaService extends PrismaClient {
         Object.entries(entity).filter(([key]) => fields.includes(key)),
       ) as Record<string, string>;
 
+      console.log(filteredData, entity);
+
       const decryptedData = this.encryptService.decryptData(
         filteredData,
         entity.ownerId,
@@ -166,7 +173,7 @@ export class PrismaService extends PrismaClient {
 
       delete entity.iv;
       delete entity.salt;
-      delete entity.ownerId;
+      // delete entity.ownerId; в некоторых сильно nested query ошибка, если удалять ownerId
     }
 
     for (const key in entity) {
@@ -255,6 +262,20 @@ export class PrismaService extends PrismaClient {
       args,
     );
   };
+
+  createManyPrivately = async function <T extends Prisma.ModelName>(
+    model: T,
+    args: Parameters<PrismaClient[T]['createMany']>['0'],
+    user: UserData,
+  ) {
+    for (const item of args!.data as Array<any>) {
+      (item as any).ownerId = user.ownerId;
+    }
+
+    return await this[model].createMany(
+      args,
+    );
+  }
 
   findManyPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -355,6 +376,31 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].delete(args);
+  }
+
+  deleteManyPrivately = async function <T extends Prisma.ModelName>(
+    model: T,
+    args: Parameters<PrismaClient[T]['deleteMany']>['0'],
+    user: UserData,
+    options?: QueryOptions,
+  ) {
+    if (!args) {
+      args = {};
+    }
+
+    args.where = {
+      ...args.where,
+      ownerId: user.ownerId,
+    };
+
+    if (options?.foremanLimited && user.roleName === 'foreman') {
+      args.where = {
+        ...args.where,
+        foremanId: user.id,
+      };
+    }
+
+    return await this[model].deleteMany(args);
   }
 
   findFirstPrivately = async function <T extends Prisma.ModelName>(
@@ -469,6 +515,32 @@ export class PrismaService extends PrismaClient {
     };
   }
 
+  findManyPrivatelyWithInclude = async function <T extends Prisma.ModelName>(
+    model: T,
+    findManyParams: Parameters<PrismaClient[T]['findMany']>['0'],
+    privateIncludedFields: {
+      fieldName: string,
+      foremanLimited?: boolean,
+    }[],
+    user: UserData,
+  ) {
+    const where = {
+      ...findManyParams?.where,
+      ...(
+        privateIncludedFields.map(({ fieldName, foremanLimited }) => ({
+          [fieldName]: {
+            ownerId: user.ownerId,
+            ...(foremanLimited && user.roleName === 'foreman' ? { foremanId: user.id } : {}),
+          },
+        }))).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
+    };
+
+    return await this[model].findMany({
+      ...findManyParams,
+      where,
+    });
+  }
+
   updateManyPrivately = async function <T extends Prisma.ModelName>(
     model: T,
     args: Parameters<PrismaClient[T]['updateMany']>['0'],
@@ -527,12 +599,16 @@ export class PrismaService extends PrismaClient {
 
     return await this.$transaction(
       ids.map((id) => {
-        return this[model].update({
+        const res = this[model].update({
           ...args,
           where: {
             id,
           },
         });
+
+        res.then((res: any) => console.log(res)).catch((err: any) => console.log(err));
+
+        return res;
       }),
     )
   }

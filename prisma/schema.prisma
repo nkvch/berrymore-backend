@@ -15,10 +15,10 @@ model employees {
   address                        String?   @db.VarChar(255)
   ownerId                        Int
   phone                          String?   @db.VarChar(255)
-  additionalInfo                 String?   @db.VarChar(255)
+  additionalInfo                 String?   @db.VarChar(1024)
   foremanId                      Int
   berryId                        String    @db.VarChar(255)
-  photoPath                      String?   @db.VarChar(255)
+  photoPath                      String?   @db.VarChar(1024)
   contractHash                   String    @db.VarChar(1024)
   lastNameHash                   String    @db.VarChar(1024)
   phoneHash                      String?   @db.VarChar(1024)
@@ -106,6 +106,7 @@ model shifts {
   employeeId Int
   startTime  DateTime  @db.DateTime(0)
   endTime    DateTime? @db.DateTime(0)
+  ownerId    Int?
   employees  employees @relation(fields: [employeeId], references: [id], onDelete: NoAction, map: "shifts_ibfk_1")
 
   @@index([employeeId], map: "shifts_employeeId_fkey")

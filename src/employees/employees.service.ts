@@ -76,8 +76,6 @@ export class EmployeesService {
       const searchHash = hash(search) as string;
       const orClause = searchMany('employees', searchHash, ['lastNameHash', 'contractHash', 'phoneHash'] as Array<keyof SelectType<'employees'>>);
 
-      console.log(orClause);
-
       where.AND = [orClause];
     }
 
@@ -207,13 +205,18 @@ export class EmployeesService {
   async bulkUpdateEmployeesFlags(employeeDto: BulkUpdateEmployeesDto, user: UserData) {
     const { ids, setFlags, removeFlags } = employeeDto;
 
-    return this.prisma.updateManyPrivatelySeparately('employees', ids, {
+    const result = await this.prisma.updateManyPrivatelySeparately('employees', ids, {
       data: {
         flags: {
           connect: setFlags.map(flag => ({ id: flag })),
           disconnect: removeFlags.map(flag => ({ id: flag })),
-        }
+        },
       },
+      select: {
+        id: true,
+      }
     }, user, { foremanLimited: true });
+
+    return result;
   }
 }
