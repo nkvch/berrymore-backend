@@ -16,8 +16,8 @@ export class HistoryController {
 
   @Post()
   @UseGuards(JwtGuard)
-  async create(@Body() flagDto: HistoryDto, @GetUser() user: UserData) {
-    return this.historyService.create(flagDto, user);
+  async create(@Body() historyDto: HistoryDto, @GetUser() user: UserData) {
+    return this.historyService.create(historyDto, user);
   }
 
   @Get()

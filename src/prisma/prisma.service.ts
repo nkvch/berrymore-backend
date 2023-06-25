@@ -54,8 +54,8 @@ export class PrismaService extends PrismaClient {
                   ),
                 });
                 allData = {
-                  ...args.data,
                   ...allData,
+                  ...args.data,
                 }
                 ownerId = allData?.ownerId;
                 break;
@@ -158,8 +158,6 @@ export class PrismaService extends PrismaClient {
       const filteredData = Object.fromEntries(
         Object.entries(entity).filter(([key]) => fields.includes(key)),
       ) as Record<string, string>;
-
-      console.log(filteredData, entity);
 
       const decryptedData = this.encryptService.decryptData(
         filteredData,
@@ -348,6 +346,9 @@ export class PrismaService extends PrismaClient {
     }
 
     const findFirstResult = await this[model].findFirst(findFirstArgs);
+
+    console.log(findFirstResult);
+    console.log(args);
 
     if (!findFirstResult) {
       throw new NotFoundException('Не найдено');
@@ -606,7 +607,7 @@ export class PrismaService extends PrismaClient {
           },
         });
 
-        res.then((res: any) => console.log(res)).catch((err: any) => console.log(err));
+        res.catch((err: any) => console.log(err));
 
         return res;
       }),

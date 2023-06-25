@@ -9,6 +9,7 @@ import { hash } from "src/common/utils/hash";
 import { GetEmployeesDto } from "./dto/get-employees.dto";
 import { SelectType, searchMany } from "src/common/utils/searchMany";
 import { BulkUpdateEmployeesDto } from "./dto/bulk-upd-employees.dto";
+import { startOfDay } from "date-fns";
 
 @Injectable()
 export class EmployeesService {
@@ -62,7 +63,7 @@ export class EmployeesService {
   }
 
   async getEmployees(getEmployeesDto: GetEmployeesDto, pagOpts: PaginateOptions, user: UserData) {
-    const { search, foremanId, flagsPresent, flagsAbsent } = getEmployeesDto;
+    const { search, foremanId, flagsPresent, flagsAbsent, hasShift } = getEmployeesDto;
 
     const where: Prisma.employeesWhereInput = {
       AND: [],
@@ -89,6 +90,21 @@ export class EmployeesService {
       where.AND = [...where.AND as any, ...flagsAndClause];
     }
 
+    if (hasShift) {
+      where.AND = [...where.AND as any, {
+        shifts: {
+          some: {
+            startDate: {
+              lte: startOfDay(new Date())
+            },
+            endDate: {
+              gte: startOfDay(new Date())
+            }
+          }
+        }
+      }];
+    }
+
     return this.prisma.paginatePrivately('employees', pagOpts, {
       where,
       select: {
@@ -107,6 +123,16 @@ export class EmployeesService {
             id: true,
             firstName: true,
             lastName: true,
+          }
+        },
+        shifts: {
+          where: {
+            startDate: {
+              lte: startOfDay(new Date()),
+            },
+            endDate: {
+              gte: startOfDay(new Date()),
+            }
           }
         }
       }

@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { BooleanFromString } from 'src/common/decorators/boolean-from-string.decorator';
 import { IdsList } from 'src/common/decorators/ids-list.decorator';
 import { NumberFromString } from 'src/common/decorators/number-from-string.decorator';
 
@@ -24,4 +25,7 @@ export class GetEmployeesDto {
   @IsOptional()
   @IsString({ message: 'Неправильно указана фамилия' })
   lastName: string;
+  @IsOptional()
+  @BooleanFromString({ message: 'Неправильно указано наличие смены' })
+  hasShift: boolean;
 }

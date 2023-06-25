@@ -104,8 +104,8 @@ model roles {
 model shifts {
   id         Int       @id @default(autoincrement())
   employeeId Int
-  startTime  DateTime  @db.DateTime(0)
-  endTime    DateTime? @db.DateTime(0)
+  startDate  DateTime  @db.DateTime(0)
+  endDate    DateTime  @db.DateTime(0)
   ownerId    Int?
   employees  employees @relation(fields: [employeeId], references: [id], onDelete: NoAction, map: "shifts_ibfk_1")
 

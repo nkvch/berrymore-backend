@@ -27,16 +27,16 @@ export class ShiftsController {
     return this.shiftsService.getShifts(getShiftsDto, user);
   }
 
-  @Put(':id')
-  @UseGuards(JwtGuard)
-  async changeBounds(@IdParam() shiftId: number, @Body() changeBoundsDto: ChangeBoundsDto, @GetUser() user: UserData) {
-    return this.shiftsService.changeBounds(shiftId, changeBoundsDto, user);
-  }
-
   @Put('cut-out-period')
   @UseGuards(JwtGuard)
   async cutOutPeriod(@Body() cutOutPeriodDto: CutOutPeriod, @GetUser() user: UserData) {
     return this.shiftsService.cutOutPeriod(cutOutPeriodDto, user);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtGuard)
+  async changeBounds(@IdParam() shiftId: number, @Body() changeBoundsDto: ChangeBoundsDto, @GetUser() user: UserData) {
+    return this.shiftsService.changeBounds(shiftId, changeBoundsDto, user);
   }
 
   @Delete(':id')

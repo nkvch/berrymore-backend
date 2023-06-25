@@ -15,6 +15,8 @@ export function DateFromString(validationOptions?: ValidationOptions) {
 
           const date = new Date(value);
 
+          (args.object as any)[propertyName] = date;
+
           return !isNaN(date.getTime());
         },
         defaultMessage(args: ValidationArguments) {

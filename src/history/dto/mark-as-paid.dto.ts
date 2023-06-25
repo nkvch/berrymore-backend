@@ -8,8 +8,9 @@ export class MarkAsPaidDto {
   @IsInt({ message: 'Неправильно указана продукт' })
   productId: number;
   @IsOptional()
-  @DateFromString({ message: 'Неправильно указана дата' })
-  fromDataTime: Date;
-  @DateFromString({ message: 'Неправильно указана дата' })
-  toDataTime: Date;
+  @DateFromString({ message: 'Неправильно указана дата начала периода' })
+  fromDateTime?: Date;
+  @IsOptional()
+  @DateFromString({ message: 'Неправильно указана дата конца периода' })
+  toDateTime?: Date;
 }

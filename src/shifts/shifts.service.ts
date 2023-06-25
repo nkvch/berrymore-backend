@@ -1,12 +1,12 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
-import { AddShiftDto } from "./dto/add-shift.dto";
+import { Prisma } from "@prisma/client";
+import { addDays, eachDayOfInterval, isSameDay } from "date-fns";
 import { UserData } from "src/auth/interfaces/UserData";
 import { PrismaService } from "src/prisma/prisma.service";
-import { GetShiftsDto } from "./dto/get-shifts.dto";
-import { Prisma } from "@prisma/client";
+import { AddShiftDto } from "./dto/add-shift.dto";
 import { ChangeBoundsDto } from "./dto/change-bounds.dto";
 import { CutOutPeriod } from "./dto/cut-out-period.dto";
-import { addDays, eachDayOfInterval, endOfDay, isSameDay, startOfDay } from "date-fns";
+import { GetShiftsDto } from "./dto/get-shifts.dto";
 
 @Injectable()
 export class ShiftsService {
@@ -15,9 +15,9 @@ export class ShiftsService {
   ) { }
 
   async addShift(addShiftDto: AddShiftDto, user: UserData) {
-    const { employeeIds, startTime, endTime } = addShiftDto;
+    const { employeeIds, startDate, endDate } = addShiftDto;
 
-    if (startTime >= endTime) {
+    if (startDate > endDate) {
       throw new HttpException('Время начала должно быть раньше времени окончания', HttpStatus.BAD_REQUEST);
     }
 
@@ -27,15 +27,15 @@ export class ShiftsService {
           employeeId,
           OR: [
             {
-              startTime: {
-                gte: startTime,
-                lte: endTime,
+              startDate: {
+                gte: startDate,
+                lte: endDate,
               },
             },
             {
-              endTime: {
-                gte: startTime,
-                lte: endTime,
+              endDate: {
+                gte: startDate,
+                lte: endDate,
               },
             },
           ]
@@ -50,8 +50,8 @@ export class ShiftsService {
     return this.prisma.createManyPrivately('shifts', {
       data: employeeIds.map(employeeId => ({
         employeeId,
-        startTime,
-        endTime,
+        startDate,
+        endDate,
       })),
     }, user);
   }
@@ -70,60 +70,60 @@ export class ShiftsService {
     if (from && !to) {
       // get all shifts that intersect with the interval from - now
       (where.OR as Array<Prisma.shiftsWhereInput>).push(...[{
-        startTime: {
+        startDate: {
           gte: from,
           lte: new Date(),
         }
       }, {
-        endTime: {
+        endDate: {
           gte: from,
           lte: new Date(),
         }
       }, {
-        startTime: {
+        startDate: {
           lt: from
         },
-        endTime: {
+        endDate: {
           gt: from
         }
       }]);
     } else if (!from && to) {
       // get all shifts that intersect with the interval now - to
       (where.OR as Array<Prisma.shiftsWhereInput>).push(...[{
-        startTime: {
+        startDate: {
           gte: new Date(),
           lte: to,
         }
       }, {
-        endTime: {
+        endDate: {
           gte: new Date(),
           lte: to,
         }
       }, {
-        startTime: {
+        startDate: {
           lt: to
         },
-        endTime: {
+        endDate: {
           gt: to
         }
       }]);
     } else if (from && to) {
       // get all shifts that intersect with the interval from - to
       (where.OR as Array<Prisma.shiftsWhereInput>).push(...[{
-        startTime: {
+        startDate: {
           gte: from,
           lte: to,
         }
       }, {
-        endTime: {
+        endDate: {
           gte: from,
           lte: to,
         }
       }, {
-        startTime: {
+        startDate: {
           lt: from
         },
-        endTime: {
+        endDate: {
           gt: to
         }
       }]);
@@ -137,8 +137,8 @@ export class ShiftsService {
       where,
       select: {
         id: true,
-        startTime: true,
-        endTime: true,
+        startDate: true,
+        endDate: true,
         employees: {
           select: {
             id: true,
@@ -161,14 +161,14 @@ export class ShiftsService {
     }], user);
   }
 
-  async changeBounds(shiftId: number, { newStartTime, newEndTime }: ChangeBoundsDto, user: UserData) {
+  async changeBounds(shiftId: number, { newstartDate, newendDate }: ChangeBoundsDto, user: UserData) {
     return this.prisma.updatePrivately('shifts', {
       where: {
         id: shiftId,
       },
       data: {
-        startTime: newStartTime,
-        endTime: newEndTime,
+        startDate: newstartDate,
+        endDate: newendDate,
       },
     }, user);
   }
@@ -185,20 +185,20 @@ export class ShiftsService {
     }
 
     (where.OR as Array<Prisma.shiftsWhereInput>).push(...[{
-      startTime: {
+      startDate: {
         gte: startDate,
         lte: endDate,
       }
     }, {
-      endTime: {
+      endDate: {
         gte: startDate,
         lte: endDate,
       }
     }, {
-      startTime: {
+      startDate: {
         lt: startDate
       },
-      endTime: {
+      endDate: {
         gt: endDate
       }
     }]);
@@ -207,6 +207,9 @@ export class ShiftsService {
       where,
       select: {
         id: true,
+        startDate: true,
+        endDate: true,
+        employeeId: true,
         employees: true
       }
     }, [{
@@ -231,8 +234,9 @@ export class ShiftsService {
 
     // recreate shifts
     for (const shift of modelData) {
-      const wasFirstDay = isSameDay(shift.startTime, startDate);
-      const wasLastDay = isSameDay(shift.endTime, endDate);
+      console.log(shift);
+      const wasFirstDay = isSameDay(shift.startDate, startDate);
+      const wasLastDay = isSameDay(shift.endDate, endDate);
 
       if (wasFirstDay && wasLastDay) {
         continue;
@@ -242,16 +246,16 @@ export class ShiftsService {
         await this.prisma.createPrivately('shifts', {
           data: {
             employeeId: shift.employeeId,
-            startTime: addDays(shift.startTime, periodLength),
-            endTime: shift.endTime,
+            startDate: addDays(shift.startDate, periodLength),
+            endDate: shift.endDate,
           }
         }, user);
       } else if (wasLastDay) {
         await this.prisma.createPrivately('shifts', {
           data: {
             employeeId: shift.employeeId,
-            startTime: shift.startTime,
-            endTime: addDays(shift.endTime, -periodLength),
+            startDate: shift.startDate,
+            endDate: addDays(shift.endDate, -periodLength),
           }
         }, user);
       }
@@ -260,16 +264,16 @@ export class ShiftsService {
         await this.prisma.createPrivately('shifts', {
           data: {
             employeeId: shift.employeeId,
-            startTime: shift.startTime,
-            endTime: addDays(endOfDay(startDate), -1),
+            startDate: shift.startDate,
+            endDate: addDays(startDate, -1),
           }
         }, user);
 
         await this.prisma.createPrivately('shifts', {
           data: {
             employeeId: shift.employeeId,
-            startTime: addDays(startOfDay(endDate), 1),
-            endTime: shift.endTime,
+            startDate: addDays(endDate, 1),
+            endDate: shift.endDate,
           }
         }, user);
       }

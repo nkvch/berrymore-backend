@@ -92,7 +92,7 @@ export class HistoryService {
   }
 
   async markAsPaid(MarkAsPaidDto: MarkAsPaidDto, user: UserData) {
-    const { employeeId, productId, fromDataTime, toDataTime } = MarkAsPaidDto;
+    const { employeeId, productId, fromDateTime, toDateTime } = MarkAsPaidDto;
 
     const isProductAllowed = !productId || await this.prisma.hasAccess('products', productId, user);
     const isEmployeesAllowed = await this.prisma.hasAccess('employees', employeeId, user, { foremanLimited: true });
@@ -102,15 +102,19 @@ export class HistoryService {
 
     const where: Prisma.historyWhereInput = {
       employeeId,
-      dateTime: {
-        lte: toDataTime,
-      }
     };
 
-    if (fromDataTime) {
+    if (fromDateTime) {
       where.dateTime = {
         ...(where.dateTime as Prisma.DateTimeFilter || {}),
-        gte: fromDataTime,
+        gte: fromDateTime,
+      };
+    }
+
+    if (toDateTime) {
+      where.dateTime = {
+        ...(where.dateTime as Prisma.DateTimeFilter || {}),
+        lte: toDateTime,
       };
     }
 

@@ -5,7 +5,7 @@ export class AddShiftDto {
   @IsArray({ message: 'Неправильно указаны сотрудники' })
   employeeIds: number[]
   @DateFromString({ message: 'Неправильно указано время начала' })
-  startTime: Date
+  startDate: Date
   @DateFromString({ message: 'Неправильно указано время окончания' })
-  endTime: Date
+  endDate: Date
 }
