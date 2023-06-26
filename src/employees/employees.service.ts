@@ -146,8 +146,30 @@ export class EmployeesService {
 
     return this.prisma.findUniquePrivately('employees', {
       where,
-      include: {
-        flags: true,
+      select: {
+        id: true,
+        contract: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        address: true,
+        additionalInfo: true,
+        photoPath: true,
+        foreman: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          }
+        },
+        flags: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          }
+        }
       }
     }, user, { foremanLimited: true });
   }
