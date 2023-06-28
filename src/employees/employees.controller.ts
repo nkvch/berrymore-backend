@@ -29,7 +29,7 @@ export class EmployeesController {
     return this.employeesService.getEmployees(getEmployeesDto, pgnOpts, user);
   }
 
-  @Get('byBerryId')
+  @Get('by-berry-id')
   @UseGuards(JwtGuard)
   async getEmployeeByBerryId(@Query('berryId') berryId: string, @GetUser() user: UserData) {
     return this.employeesService.getEmployeeByBerryId(berryId, user);

@@ -50,8 +50,6 @@ export class ProductsService {
       where: { id },
     }, user);
 
-    console.log(existingProduct);
-
     let photoPath: string | null = null;
 
     if (existingProduct.photoPath && photo) {

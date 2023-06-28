@@ -347,9 +347,6 @@ export class PrismaService extends PrismaClient {
 
     const findFirstResult = await this[model].findFirst(findFirstArgs);
 
-    console.log(findFirstResult);
-    console.log(args);
-
     if (!findFirstResult) {
       throw new NotFoundException('Не найдено');
     }
@@ -612,6 +609,30 @@ export class PrismaService extends PrismaClient {
         return res;
       }),
     )
+  }
+
+  countPrivately = async function <T extends Prisma.ModelName>(
+    model: T,
+    args: Parameters<PrismaClient[T]['count']>['0'],
+    user: UserData,
+    options?: QueryOptions,
+  ) {
+    const modifiedArgs = {
+      ...args,
+      where: {
+        ...args?.where,
+        ownerId: user.ownerId,
+      },
+    };
+
+    if (options?.foremanLimited && user.roleName === 'foreman') {
+      modifiedArgs.where = {
+        ...modifiedArgs.where,
+        foremanId: user.id,
+      };
+    }
+
+    return await this[model].count(modifiedArgs);
   }
 
   hasAccess = async function <T extends Prisma.ModelName>(

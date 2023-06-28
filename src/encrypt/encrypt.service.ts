@@ -79,8 +79,6 @@ export class EncryptService {
         continue;
       }
 
-      console.log(value);
-
       const encrypted = Buffer.concat([cipher.update(value), cipher.final()]);
 
       data[_key] = encrypted.toString('hex');

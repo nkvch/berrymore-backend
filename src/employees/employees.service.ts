@@ -253,7 +253,23 @@ export class EmployeesService {
   async bulkUpdateEmployeesFlags(employeeDto: BulkUpdateEmployeesDto, user: UserData) {
     const { ids, setFlags, removeFlags } = employeeDto;
 
-    const result = await this.prisma.updateManyPrivatelySeparately('employees', ids, {
+    const myEmployeesNumber = await this.prisma.countPrivately('employees', {
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    }, user, { foremanLimited: true });
+
+    if (myEmployeesNumber !== ids.length) {
+      throw new HttpException('Некоторые сотрудники не принадлежат вам', HttpStatus.FORBIDDEN);
+    }
+
+    //@TODO: one day in the future, should be done in transaction
+    return Promise.all(ids.map(id => this.prisma.updatePrivately('employees', {
+      where: {
+        id,
+      },
       data: {
         flags: {
           connect: setFlags.map(flag => ({ id: flag })),
@@ -263,8 +279,6 @@ export class EmployeesService {
       select: {
         id: true,
       }
-    }, user, { foremanLimited: true });
-
-    return result;
+    }, user, { foremanLimited: true })));
   }
 }

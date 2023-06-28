@@ -234,7 +234,6 @@ export class ShiftsService {
 
     // recreate shifts
     for (const shift of modelData) {
-      console.log(shift);
       const wasFirstDay = isSameDay(shift.startDate, startDate);
       const wasLastDay = isSameDay(shift.endDate, endDate);
 
