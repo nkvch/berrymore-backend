@@ -66,6 +66,7 @@ export class EmployeesService {
     const { search, foremanId, flagsPresent, flagsAbsent, hasShift } = getEmployeesDto;
 
     const where: Prisma.employeesWhereInput = {
+      isArchived: false,
       AND: [],
     };
 
@@ -250,6 +251,59 @@ export class EmployeesService {
     return deletedEmployee;
   }
 
+  async hasEmployeeShiftsOrHistory(id: number, user: UserData) {
+    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, { foremanLimited: true });
+
+    if (!hasAccessToEmp) {
+      throw new HttpException('Нет доступа к сотруднику', HttpStatus.FORBIDDEN);
+    }
+
+    const shifts = await this.prisma.countPrivately('shifts', {
+      where: {
+        employees: {
+          id,
+        },
+      },
+    }, user, { foremanLimited: true });
+
+    const history = await this.prisma.countPrivately('history', {
+      where: {
+        employeeId: id,
+      },
+    }, user, { foremanLimited: true });
+
+    return {
+      hasShifts: shifts > 0,
+      hasHistory: history > 0,
+    }
+  }
+
+  async deleteAllEmployeeShiftsAndHistory(id: number, user: UserData) {
+    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, { foremanLimited: true });
+
+    if (!hasAccessToEmp) {
+      throw new HttpException('Нет доступа к сотруднику', HttpStatus.FORBIDDEN);
+    }
+
+    await this.prisma.deleteManyPrivately('shifts', {
+      where: {
+        employees: {
+          id,
+        },
+      },
+    }, user, { foremanLimited: true });
+
+    await this.prisma.deleteManyPrivately('history', {
+      where: {
+        employeeId: id,
+      },
+    }, user, { foremanLimited: true });
+
+    return {
+      success: true,
+    }
+  }
+
   async bulkUpdateEmployeesFlags(employeeDto: BulkUpdateEmployeesDto, user: UserData) {
     const { ids, setFlags, removeFlags } = employeeDto;
 
@@ -280,5 +334,16 @@ export class EmployeesService {
         id: true,
       }
     }, user, { foremanLimited: true })));
+  }
+
+  async archiveEmployee(id: number, user: UserData) {
+    return this.prisma.updatePrivately('employees', {
+      where: {
+        id,
+      },
+      data: {
+        isArchived: true,
+      },
+    }, user, { foremanLimited: true });
   }
 }

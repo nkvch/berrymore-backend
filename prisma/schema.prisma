@@ -26,10 +26,10 @@ model employees {
   iv                             String    @db.VarChar(255)
   users_employees_ownerIdTousers users     @relation("employees_ownerIdTousers", fields: [ownerId], references: [id], onDelete: NoAction, map: "employees_ibfk_1")
   foreman                        users     @relation("employees_foremanIdTousers", fields: [foremanId], references: [id], map: "employees_ibfk_2")
-  // employees_flags                  employees_flags[]
   history                        history[]
   shifts                         shifts[]
   flags                          flags[]   @relation("employees_flags")
+  isArchived                     Boolean   @default(false)
 
   @@index([contractHash], map: "employees_contractHash")
   @@index([id], map: "employees_flags_flag_id_idx")
@@ -73,7 +73,7 @@ model history {
   salt       String?    @db.VarChar(255)
   isPaid     Boolean    @default(false)
   ownerId    Int?
-  employees  employees? @relation(fields: [employeeId], references: [id], map: "history_ibfk_73")
+  employees  employees? @relation(fields: [employeeId], references: [id], map: "history_ibfk_73", onDelete: NoAction)
   products   products?  @relation(fields: [productId], references: [id], map: "history_ibfk_74")
 
   @@index([employeeId], map: "history_employeeId_fkey")

@@ -59,4 +59,22 @@ export class EmployeesController {
   async deleteEmployee(@IdParam() id: number, @GetUser() user: UserData) {
     return this.employeesService.deleteEmployee(id, user);
   }
+
+  @Get('has-any-data/:id')
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  async hasAnyData(@IdParam() id: number, @GetUser() user: UserData) {
+    return this.employeesService.hasEmployeeShiftsOrHistory(id, user);
+  }
+
+  @Delete('all-data/:id')
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  async deleteAllData(@IdParam() id: number, @GetUser() user: UserData) {
+    return this.employeesService.deleteAllEmployeeShiftsAndHistory(id, user);
+  }
+
+  @Put('archive/:id')
+  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  async archiveEmployee(@IdParam() id: number, @GetUser() user: UserData) {
+    return this.employeesService.archiveEmployee(id, user);
+  }
 }

@@ -25,7 +25,7 @@ export class HistoryService {
   }
 
   async findAll(getHistoryDto: GetHistoryDto, paginationParams: PaginateOptions, user: UserData) {
-    const { productId, employeeId, fromDateTime, toDateTime, sort } = getHistoryDto;
+    const { productId, employeeId, fromDateTime, toDateTime, sort, foremanId } = getHistoryDto;
 
     const where: Prisma.historyWhereInput = {};
 
@@ -35,6 +35,12 @@ export class HistoryService {
 
     if (employeeId) {
       where.employeeId = employeeId;
+    }
+
+    if (foremanId) {
+      where.employees = {
+        foremanId,
+      };
     }
 
     if (fromDateTime) {
@@ -55,9 +61,31 @@ export class HistoryService {
       orderBy: {
         dateTime: sort,
       },
-      include: {
-        products: true,
-        employees: true,
+      select: {
+        id: true,
+        dateTime: true,
+        amount: true,
+        isPaid: true,
+        products: {
+          select: {
+            id: true,
+            productName: true,
+          }
+        },
+        employees: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            foreman: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        }
       },
     }, [{
       fieldName: 'products',

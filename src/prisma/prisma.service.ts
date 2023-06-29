@@ -484,6 +484,7 @@ export class PrismaService extends PrismaClient {
       ...(
         privateIncludedFields.map(({ fieldName, foremanLimited }) => ({
           [fieldName]: {
+            ...((findManyParams?.where as any)?.[fieldName]),
             ownerId: user.ownerId,
             ...(foremanLimited && user.roleName === 'foreman' ? { foremanId: user.id } : {}),
           },

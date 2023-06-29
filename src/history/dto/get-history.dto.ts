@@ -1,5 +1,6 @@
 import { IsIn, IsNumber, IsOptional } from "class-validator";
 import { DateFromString } from "src/common/decorators/date-from-string.decorator";
+import { NumberFromString } from "src/common/decorators/number-from-string.decorator";
 
 export class GetHistoryDto {
   @IsOptional()
@@ -9,13 +10,13 @@ export class GetHistoryDto {
   @DateFromString({ message: 'Неправильно указана дата' })
   toDateTime: Date;
   @IsOptional()
-  @IsNumber({}, { message: 'Неправильно указан бригадир' })
+  @NumberFromString({ message: 'Неправильно указан бригадир' })
   foremanId: number;
   @IsOptional()
-  @IsNumber({}, { message: 'Неправильно указан продукт' })
+  @NumberFromString({ message: 'Неправильно указан продукт' })
   productId: number;
   @IsOptional()
-  @IsNumber({}, { message: 'Неправильно указан сборщик' })
+  @NumberFromString({ message: 'Неправильно указан сборщик' })
   employeeId: number;
   @IsIn(['asc', 'desc'], { message: 'Неправильно указана сортировка' })
   sort: 'asc' | 'desc';
