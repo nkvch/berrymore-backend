@@ -29,6 +29,8 @@ export class EmployeesService {
 
     const { flags, ...empData } = addEmployeeDto;
 
+    let _flags = flags || [];
+
     try {
       return this.prisma.createPrivately('employees', {
         data: {
@@ -39,7 +41,7 @@ export class EmployeesService {
           lastNameHash,
           phoneHash,
           flags: {
-            connect: flags.map(flag => ({ id: flag })),
+            connect: _flags.map(flag => ({ id: flag })),
           }
         } as any,
         select: {

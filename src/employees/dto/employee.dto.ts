@@ -16,6 +16,7 @@ export class EmployeeDto {
   phone: string;
   @IsString({ message: 'Неправильно указан контракт' })
   contract: string;
+  @IsOptional()
   @IdsList({ message: 'Неправильно указаны флаги' })
   flags: number[];
   @IsOptional()
