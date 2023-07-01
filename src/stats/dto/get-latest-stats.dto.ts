@@ -1,4 +1,5 @@
 import { IsOptional } from "class-validator";
+import { DateFromString } from "src/common/decorators/date-from-string.decorator";
 import { NumberFromString } from "src/common/decorators/number-from-string.decorator";
 
 export class GetLatestStatsDto {
@@ -8,4 +9,8 @@ export class GetLatestStatsDto {
   @IsOptional()
   @NumberFromString({ message: 'Неправильно указан бригадир' })
   foremanId: number;
+  @DateFromString({ message: 'Неправильно указана дата начала' })
+  fromDateTime: Date;
+  @DateFromString({ message: 'Неправильно указана дата окончания' })
+  toDateTime: Date;
 }

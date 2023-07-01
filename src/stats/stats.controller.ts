@@ -14,7 +14,7 @@ export class StatsController {
   @Get()
   @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
   async getLatestStats(@Query() getLatestStatsDto: GetLatestStatsDto, @GetUser() user: UserData) {
-    return this.statsService.getLatestStats(getLatestStatsDto, user);
+    return this.statsService.getStats(getLatestStatsDto, user);
   }
 
   @Get('calc/:id')

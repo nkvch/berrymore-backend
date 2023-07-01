@@ -6,13 +6,17 @@ import { Prisma, employees, history, products } from '@prisma/client';
 import { CalcEmployeeDto } from './dto/calc-employee.dto';
 
 export interface Stats {
-  top10Employees: {
+  topEmployees: {
     id: number;
     firstName: string;
     lastName: string;
     amount: number;
   }[];
   totalAmount: number;
+  unpaid: {
+    amount: number;
+    pay: number;
+  }
 }
 
 export interface CalcEmployeeData {
@@ -47,13 +51,14 @@ type HistoryWithProductsPriceAndName = history & {
 export class StatsService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async getLatestStats(getLatestStatsDto: GetLatestStatsDto, user: UserData) {
-    const { productId, foremanId } = getLatestStatsDto;
-    const twoWeeksAgoDateTime = new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
+  async getStats(getLatestStatsDto: GetLatestStatsDto, user: UserData) {
+    const { productId, foremanId, fromDateTime, toDateTime } = getLatestStatsDto;
+    // const twoWeeksAgoDateTime = new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
 
     const where: Prisma.historyWhereInput = {
       dateTime: {
-        gte: twoWeeksAgoDateTime,
+        gte: fromDateTime,
+        lte: toDateTime,
       },
     };
 
@@ -73,14 +78,15 @@ export class StatsService {
         employees: true,
         products: true,
         amount: true,
+        isPaid: true,
       },
       orderBy: {
         dateTime: 'desc',
       },
     }, user);
 
-    const top10Employees = latestHistory
-      .reduce((acc: Stats['top10Employees'], history) => {
+    const topEmployees = latestHistory
+      .reduce((acc: Stats['topEmployees'], history) => {
         const employee = history.employees;
         const employeeIndex = acc.findIndex(accEmployee => accEmployee.id === employee.id);
 
@@ -98,16 +104,28 @@ export class StatsService {
         }
 
         return acc;
-      }, [] as Stats['top10Employees']).sort((a, b) => b.amount - a.amount).slice(0, 10);
+      }, [] as Stats['topEmployees']).sort((a, b) => b.amount - a.amount);
 
     const totalAmount = latestHistory.reduce((acc, history) => {
       acc += Number(history.amount);
       return acc;
     }, 0);
 
+    const unpaid = latestHistory.reduce((acc, history) => {
+      if (!history.isPaid) {
+        acc.amount += Number(history.amount);
+        acc.pay += Number(history.amount) * Number(history.products.productPrice);
+      }
+      return acc;
+    }, {
+      amount: 0,
+      pay: 0,
+    });
+
     return {
-      top10Employees,
+      topEmployees,
       totalAmount,
+      unpaid,
     };
   }
 
