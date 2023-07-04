@@ -6,6 +6,7 @@ import { PaginateOptions, PrismaService } from 'src/prisma/prisma.service';
 import { AddForemanDto } from './dto/add-foreman.dto';
 import { users } from '@prisma/client';
 import { UpdateForemanDto } from './dto/update-foreman.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class UserService {
@@ -26,8 +27,14 @@ export class UserService {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(foreman.password, salt);
 
+    const hashFnForOwnerHash = crypto.createHash('sha512');
+
+    hashFnForOwnerHash.update(foreman.password);
+
+    const hashForOwnerHash = hashFnForOwnerHash.digest('hex');
+
     const encryptedOwnerHash =
-      this.encryptService.encryptOwnerHashWithForemanHash(ownerId, hash);
+      this.encryptService.encryptOwnerHashWithForemanHash(ownerId, hashForOwnerHash);
 
     try {
       const newForeman = await this.prisma.users.create({

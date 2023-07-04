@@ -13,7 +13,7 @@ export function IdsList(validationOptions?: ValidationOptions) {
             return false;
           }
 
-          const flagIds = value.split(',').map((id) => parseInt(id.trim(), 10));
+          const flagIds = value === '' ? [] : value.split(',').map((id) => parseInt(id.trim(), 10));
 
           if (flagIds.some(isNaN)) {
             return false;
