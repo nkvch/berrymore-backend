@@ -217,6 +217,10 @@ export class EmployeesService {
     const contractHash = hash(employeeDto.contract);
     const lastNameHash = hash(employeeDto.lastName);
 
+    if (user.roleName === 'foreman') {
+      empData.foremanId = user.id;
+    }
+
     try {
       return this.prisma.updatePrivately('employees', {
         where: {

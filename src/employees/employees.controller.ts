@@ -47,20 +47,20 @@ export class EmployeesController {
   }
 
   @Put(':id')
-  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('photo'))
   async updateEmployee(@IdParam() id: number, @Body() updateEmployeeDto: EmployeeDto, @GetUser() user: UserData, @UploadedFile() photo: Express.Multer.File) {
     return this.employeesService.updateEmployee(id, updateEmployeeDto, user, photo);
   }
 
   @Delete(':id')
-  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @UseGuards(JwtGuard)
   async deleteEmployee(@IdParam() id: number, @GetUser() user: UserData) {
     return this.employeesService.deleteEmployee(id, user);
   }
 
   @Get('has-any-data/:id')
-  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @UseGuards(JwtGuard)
   async hasAnyData(@IdParam() id: number, @GetUser() user: UserData) {
     return this.employeesService.hasEmployeeShiftsOrHistory(id, user);
   }
@@ -72,7 +72,7 @@ export class EmployeesController {
   }
 
   @Put('archive/:id')
-  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @UseGuards(JwtGuard)
   async archiveEmployee(@IdParam() id: number, @GetUser() user: UserData) {
     return this.employeesService.archiveEmployee(id, user);
   }
