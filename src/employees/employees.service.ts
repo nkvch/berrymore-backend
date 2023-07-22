@@ -31,6 +31,10 @@ export class EmployeesService {
 
     let _flags = flags || [];
 
+    if (user.roleName === 'foreman') {
+      empData.foremanId = user.id;
+    }
+
     try {
       return this.prisma.createPrivately('employees', {
         data: {

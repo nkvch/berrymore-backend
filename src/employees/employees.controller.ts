@@ -1,23 +1,22 @@
-import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
-import { EmployeesService } from "./employees.service";
-import { JwtGuard, RestrictRolesGuard } from "src/auth/guards";
+import { Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { EmployeeDto } from "./dto/employee.dto";
 import { GetUser } from "src/auth/decorators/get-user.decorator";
+import { JwtGuard, RestrictRolesGuard } from "src/auth/guards";
 import { UserData } from "src/auth/interfaces/UserData";
-import { GetEmployeesDto } from "./dto/get-employees.dto";
+import { IdParam } from "src/common/decorators/id-param.decorator";
 import { PaginationParams } from "src/common/decorators/pagination-query-params.decorator";
 import { PaginateOptions } from "src/prisma/prisma.service";
-import { validate } from "class-validator";
-import { IdParam } from "src/common/decorators/id-param.decorator";
 import { BulkUpdateEmployeesDto } from "./dto/bulk-upd-employees.dto";
+import { EmployeeDto } from "./dto/employee.dto";
+import { GetEmployeesDto } from "./dto/get-employees.dto";
+import { EmployeesService } from "./employees.service";
 
 @Controller('employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) { }
 
   @Post()
-  @UseGuards(JwtGuard, new RestrictRolesGuard('foreman'))
+  @UseGuards(JwtGuard)
   @UseInterceptors(FileInterceptor('photo'))
   addEmployee(@Body() addEmployeeDto: EmployeeDto, @GetUser() user: UserData, @UploadedFile() photo: Express.Multer.File) {
     return this.employeesService.create(addEmployeeDto, user, photo);
