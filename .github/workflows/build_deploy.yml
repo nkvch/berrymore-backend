@@ -6,52 +6,8 @@ on:
       - master
 
 jobs:
-  build:
-    runs-on: nkvch-omen-ubuntu22
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-      REDIS_HOST: ${{ secrets.REDIS_HOST }}
-      REDIS_PORT: ${{ secrets.REDIS_PORT }}
-      MAIL_HOST: ${{ secrets.MAIL_HOST }}
-      MAIL_PORT: ${{ secrets.MAIL_PORT }}
-      MAIL_USER: ${{ secrets.MAIL_USER }}
-      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
-      SALT_FOR_OWNER_HASH: ${{ secrets.SALT_FOR_OWNER_HASH }}
-      IV_FOR_OWNER_HASH: ${{ secrets.IV_FOR_OWNER_HASH }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '18'
-
-      - name: Install deps
-        run: |
-          npm install -g yarn
-          yarn install
-
-      - name: Build and push Docker image
-        run: |
-          # source ~/.bashrc
-          # echo $DATABASE_URL
-          # yarn install
-          # echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
-          docker rmi -f nkvch/berrymore-backend || true
-          docker compose build
-          docker push nkvch/berrymore-backend
-          docker logout
-
-  # deploy:
-  #   needs: build
-  #   runs-on: aws
+  # build:
+  #   runs-on: nkvch-omen-ubuntu22
   #   env:
   #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
   #     DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -69,13 +25,57 @@ jobs:
   #     IV_FOR_OWNER_HASH: ${{ secrets.IV_FOR_OWNER_HASH }}
   #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
   #   steps:
-  #     - name: Checkout docker-compose.yml
+  #     - name: Checkout repository
   #       uses: actions/checkout@v2
 
-  #     - name: Pull and deploy Docker image
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: '18'
+
+  #     - name: Install deps
   #       run: |
-  #         echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
-  #         docker-compose down
+  #         npm install -g yarn
+  #         yarn install
+
+  #     - name: Build and push Docker image
+  #       run: |
+  #         # source ~/.bashrc
+  #         # echo $DATABASE_URL
+  #         # yarn install
+  #         # echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
   #         docker rmi -f nkvch/berrymore-backend || true
-  #         docker-compose up -d --remove-orphans --force-recreate --pull=always
+  #         docker compose build
+  #         docker push nkvch/berrymore-backend
   #         docker logout
+
+  deploy:
+    # needs: build
+    runs-on: nkvch-vultr
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+      REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      MAIL_HOST: ${{ secrets.MAIL_HOST }}
+      MAIL_PORT: ${{ secrets.MAIL_PORT }}
+      MAIL_USER: ${{ secrets.MAIL_USER }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+      SALT_FOR_OWNER_HASH: ${{ secrets.SALT_FOR_OWNER_HASH }}
+      IV_FOR_OWNER_HASH: ${{ secrets.IV_FOR_OWNER_HASH }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    steps:
+      - name: Checkout docker-compose.yml
+        uses: actions/checkout@v2
+
+      - name: Pull and deploy Docker image
+        run: |
+          echo "$DOCKERHUB_PASSWORD" | docker login -u nkvch --password-stdin
+          docker-compose down
+          docker rmi -f nkvch/berrymore-backend || true
+          docker-compose up -d --remove-orphans --force-recreate --pull=always
+          docker logout
