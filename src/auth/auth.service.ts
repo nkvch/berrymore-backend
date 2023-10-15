@@ -80,7 +80,7 @@ export class AuthService {
 
     const token = crypto.randomBytes(4).toString('hex');
 
-    this.tempStorage.set(token, JSON.stringify(userData), 60 * 20);
+    this.tempStorage.set(token, JSON.stringify(userData), 60 * 20 * 1000);
 
     const email = prepareEmail(token);
 

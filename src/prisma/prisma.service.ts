@@ -45,9 +45,7 @@ export class PrismaService extends PrismaClient {
                 allData = args.data;
                 break;
               case 'update':
-                allData = await (
-                  this[model] as any
-                ).findUnique({
+                allData = await (this[model] as any).findUnique({
                   where: args.where,
                   select: Object.fromEntries(
                     cfg.fields.map((key) => [key, true]),
@@ -56,7 +54,7 @@ export class PrismaService extends PrismaClient {
                 allData = {
                   ...allData,
                   ...args.data,
-                }
+                };
                 ownerId = allData?.ownerId;
                 break;
             }
@@ -98,6 +96,35 @@ export class PrismaService extends PrismaClient {
 
       return result;
     });
+
+    this.roles.count().then((count) => {
+      console.log('roles count', count);
+      const hasAny = count > 0;
+
+      if (!hasAny) {
+        console.log('creating roles');
+        this.roles
+          .createMany({
+            data: [
+              {
+                roleName: 'admin',
+              },
+              {
+                roleName: 'owner',
+              },
+              {
+                roleName: 'foreman',
+              },
+            ],
+          })
+          .catch((err) => {
+            console.log(err);
+          })
+          .then(() => {
+            console.log('roles created');
+          });
+      }
+    });
   }
 
   includeEncryptionAttributesWhereNeeded = function (
@@ -138,12 +165,9 @@ export class PrismaService extends PrismaClient {
     }
 
     return args;
-  }
+  };
 
-  decryptEntity = async function (
-    entity: any,
-    modelName: string,
-  ) {
+  decryptEntity = async function (entity: any, modelName: string) {
     const cfg = encryptionConfig[modelName];
 
     if (Array.isArray(entity)) {
@@ -183,14 +207,13 @@ export class PrismaService extends PrismaClient {
     }
 
     return entity;
-  }
+  };
 
   mapEntity = function (entity: any, modelName: string) {
     const cfg = mappersConfig[modelName];
 
     if (Array.isArray(entity)) {
       return entity.map((item) => this.mapEntity(item, modelName));
-
     }
 
     if (cfg) {
@@ -214,7 +237,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return entity;
-  }
+  };
 
   encrpyt(ownerId: users['id'], data: any) {
     const encryptedData = this.encryptService.encryptData(data, ownerId);
@@ -256,9 +279,7 @@ export class PrismaService extends PrismaClient {
   ) {
     (args.data as any).ownerId = user.ownerId;
 
-    return await this[model].create(
-      args,
-    );
+    return await this[model].create(args);
   };
 
   createManyPrivately = async function <T extends Prisma.ModelName>(
@@ -270,10 +291,8 @@ export class PrismaService extends PrismaClient {
       (item as any).ownerId = user.ownerId;
     }
 
-    return await this[model].createMany(
-      args,
-    );
-  }
+    return await this[model].createMany(args);
+  };
 
   findManyPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -294,7 +313,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].findMany(args);
-  }
+  };
 
   findUniquePrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -323,7 +342,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].findUnique(args);
-  }
+  };
 
   updatePrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -352,7 +371,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return this[model].update(args);
-  }
+  };
 
   deletePrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -374,7 +393,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].delete(args);
-  }
+  };
 
   deleteManyPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -399,7 +418,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].deleteMany(args);
-  }
+  };
 
   findFirstPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -423,7 +442,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].findFirst(modifiedArgs);
-  }
+  };
 
   paginatePrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -467,28 +486,31 @@ export class PrismaService extends PrismaClient {
       totalItems: count,
       currentPage: page,
     };
-  }
+  };
 
   paginatePrivatelyWithInclude = async function <T extends Prisma.ModelName>(
     model: T,
     paginateParams: PaginateOptions,
     findManyParams: Parameters<PrismaClient[T]['findMany']>['0'],
     privateIncludedFields: {
-      fieldName: string,
-      foremanLimited?: boolean,
+      fieldName: string;
+      foremanLimited?: boolean;
     }[],
     user: UserData,
   ) {
     const where = {
       ...findManyParams?.where,
-      ...(
-        privateIncludedFields.map(({ fieldName, foremanLimited }) => ({
+      ...privateIncludedFields
+        .map(({ fieldName, foremanLimited }) => ({
           [fieldName]: {
-            ...((findManyParams?.where as any)?.[fieldName]),
+            ...(findManyParams?.where as any)?.[fieldName],
             ownerId: user.ownerId,
-            ...(foremanLimited && user.roleName === 'foreman' ? { foremanId: user.id } : {}),
+            ...(foremanLimited && user.roleName === 'foreman'
+              ? { foremanId: user.id }
+              : {}),
           },
-        }))).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
+        }))
+        .reduce((acc, curr) => ({ ...acc, ...curr }), {}),
     };
 
     const count = await this[model].count({
@@ -512,33 +534,36 @@ export class PrismaService extends PrismaClient {
       totalItems: count,
       currentPage: page,
     };
-  }
+  };
 
   findManyPrivatelyWithInclude = async function <T extends Prisma.ModelName>(
     model: T,
     findManyParams: Parameters<PrismaClient[T]['findMany']>['0'],
     privateIncludedFields: {
-      fieldName: string,
-      foremanLimited?: boolean,
+      fieldName: string;
+      foremanLimited?: boolean;
     }[],
     user: UserData,
   ) {
     const where = {
       ...findManyParams?.where,
-      ...(
-        privateIncludedFields.map(({ fieldName, foremanLimited }) => ({
+      ...privateIncludedFields
+        .map(({ fieldName, foremanLimited }) => ({
           [fieldName]: {
             ownerId: user.ownerId,
-            ...(foremanLimited && user.roleName === 'foreman' ? { foremanId: user.id } : {}),
+            ...(foremanLimited && user.roleName === 'foreman'
+              ? { foremanId: user.id }
+              : {}),
           },
-        }))).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
+        }))
+        .reduce((acc, curr) => ({ ...acc, ...curr }), {}),
     };
 
     return await this[model].findMany({
       ...findManyParams,
       where,
     });
-  }
+  };
 
   updateManyPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -562,7 +587,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].updateMany(modifiedArgs);
-  }
+  };
 
   updateManyPrivatelySeparately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -609,8 +634,8 @@ export class PrismaService extends PrismaClient {
 
         return res;
       }),
-    )
-  }
+    );
+  };
 
   countPrivately = async function <T extends Prisma.ModelName>(
     model: T,
@@ -634,7 +659,7 @@ export class PrismaService extends PrismaClient {
     }
 
     return await this[model].count(modifiedArgs);
-  }
+  };
 
   hasAccess = async function <T extends Prisma.ModelName>(
     model: T,
@@ -663,5 +688,5 @@ export class PrismaService extends PrismaClient {
     });
 
     return count === (Array.isArray(id) ? id.length : 1);
-  }
+  };
 }
