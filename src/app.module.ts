@@ -3,7 +3,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { EmployeesModule } from './employees/employees.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
+// import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule } from '@nestjs/config';
 import { EncryptModule } from './encrypt/encrypt.module';
@@ -24,17 +24,17 @@ import { ShiftsModule } from './shifts/shifts.module';
     UserModule,
     EmployeesModule,
     PrismaModule,
-    RedisModule.forRoot({
-      config: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
-        retryStrategy: (times) => {
-          // reconnect after
-          return Math.min(times * 50, 2000);
-        },
-      },
-      readyLog: true,
-    }),
+    // RedisModule.forRoot({
+    //   config: {
+    //     host: process.env.REDIS_HOST,
+    //     port: Number(process.env.REDIS_PORT),
+    //     retryStrategy: (times) => {
+    //       // reconnect after
+    //       return Math.min(times * 50, 2000);
+    //     },
+    //   },
+    //   readyLog: true,
+    // }),
     MailerModule.forRoot({
       transport: {
         host: process.env.MAIL_HOST,

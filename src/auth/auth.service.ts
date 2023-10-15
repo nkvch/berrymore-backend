@@ -1,7 +1,12 @@
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
+// import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { MailerService } from '@nestjs-modules/mailer';
-import { HttpException, HttpStatus, Injectable, UseGuards } from '@nestjs/common';
-import { Redis } from 'ioredis';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UseGuards,
+} from '@nestjs/common';
+// import { Redis } from 'ioredis';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcryptjs';
@@ -16,15 +21,39 @@ import { UserData } from './interfaces/UserData';
 import { JwtTokenUserData } from './interfaces/JwtTokenUserData';
 
 @Injectable()
+class LikeRedis {
+  storage = new Map<string, string>();
+
+  set(key: string, value: string, time?: number) {
+    this.storage.set(key, value);
+
+    if (time) {
+      setTimeout(() => {
+        this.storage.delete(key);
+      }, time);
+    }
+  }
+
+  get(key: string) {
+    return this.storage.get(key);
+  }
+
+  del(key: string) {
+    this.storage.delete(key);
+  }
+}
+
+@Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
-    @InjectRedis() private readonly redis: Redis,
+    // @InjectRedis() private readonly redis: Redis,
+    private readonly redis: LikeRedis,
     private readonly mailService: MailerService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly encryptService: EncryptService,
-  ) { }
+  ) {}
 
   async signin(signinDto: SigninDto) {
     const user = await this.prisma.users.findUnique({
@@ -76,7 +105,7 @@ export class AuthService {
 
     const token = crypto.randomBytes(4).toString('hex');
 
-    await this.redis.set(token, JSON.stringify(userData), 'EX', 60 * 20);
+    this.redis.set(token, JSON.stringify(userData), 60 * 20);
 
     const email = prepareEmail(token);
 
@@ -92,7 +121,7 @@ export class AuthService {
   }
 
   async verify(token: string) {
-    const user = await this.redis.get(token);
+    const user = this.redis.get(token);
 
     if (!user) {
       throw new HttpException(
@@ -103,11 +132,13 @@ export class AuthService {
 
     const userData = JSON.parse(user) as Omit<users, 'id'>;
 
+    console.log(userData);
+
     const createdUser = await this.prisma.users.create({
       data: userData,
     });
 
-    await this.redis.del(token);
+    this.redis.del(token);
 
     return createdUser;
   }
@@ -139,7 +170,13 @@ export class AuthService {
       throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
     }
 
-    const { username, email, firstName, lastName, roles: { roleName } } = userData;
+    const {
+      username,
+      email,
+      firstName,
+      lastName,
+      roles: { roleName },
+    } = userData;
 
     return {
       username,

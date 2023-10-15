@@ -41,3 +41,6 @@ lerna-debug.log*
 local-dev/
 
 move_to_aws.sh
+
+data
+berrykey
