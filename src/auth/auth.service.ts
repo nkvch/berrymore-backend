@@ -1,4 +1,3 @@
-// import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { MailerService } from '@nestjs-modules/mailer';
 import {
   HttpException,
@@ -6,7 +5,6 @@ import {
   Injectable,
   UseGuards,
 } from '@nestjs/common';
-// import { Redis } from 'ioredis';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcryptjs';
@@ -19,36 +17,13 @@ import { ConfigService } from '@nestjs/config';
 import { EncryptService } from 'src/encrypt/encrypt.service';
 import { UserData } from './interfaces/UserData';
 import { JwtTokenUserData } from './interfaces/JwtTokenUserData';
-
-@Injectable()
-class LikeRedis {
-  storage = new Map<string, string>();
-
-  set(key: string, value: string, time?: number) {
-    this.storage.set(key, value);
-
-    if (time) {
-      setTimeout(() => {
-        this.storage.delete(key);
-      }, time);
-    }
-  }
-
-  get(key: string) {
-    return this.storage.get(key);
-  }
-
-  del(key: string) {
-    this.storage.delete(key);
-  }
-}
+import { TempStorage } from 'src/tempstorage/tempstorage.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
-    // @InjectRedis() private readonly redis: Redis,
-    private readonly redis: LikeRedis,
+    private readonly tempStorage: TempStorage,
     private readonly mailService: MailerService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
@@ -105,7 +80,7 @@ export class AuthService {
 
     const token = crypto.randomBytes(4).toString('hex');
 
-    this.redis.set(token, JSON.stringify(userData), 60 * 20);
+    this.tempStorage.set(token, JSON.stringify(userData), 60 * 20);
 
     const email = prepareEmail(token);
 
@@ -121,7 +96,7 @@ export class AuthService {
   }
 
   async verify(token: string) {
-    const user = this.redis.get(token);
+    const user = this.tempStorage.get(token);
 
     if (!user) {
       throw new HttpException(
@@ -138,7 +113,7 @@ export class AuthService {
       data: userData,
     });
 
-    this.redis.del(token);
+    this.tempStorage.del(token);
 
     return createdUser;
   }
