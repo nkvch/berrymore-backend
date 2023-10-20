@@ -16,7 +16,7 @@ export interface Stats {
   unpaid: {
     amount: number;
     pay: number;
-  }
+  };
 }
 
 export interface CalcEmployeeData {
@@ -26,6 +26,7 @@ export interface CalcEmployeeData {
     id: number;
     name: string;
     amount: number;
+    unit: string;
     pay: number;
   }[];
 }
@@ -42,17 +43,32 @@ type HistoryWithProductsAndEmployees = HistoryWithNumberAmount & {
 type HistoryWithProductsPriceAndName = history & {
   products: {
     id: number;
+    productUnit: string;
     productPrice: number;
     productName: string;
-  }
+  };
+};
+
+type TopEmployees = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  amount: number;
+}[];
+
+type AmountPerProduct = {
+  product: products;
+  amount: number;
+  topEmployees: TopEmployees;
 };
 
 @Injectable()
 export class StatsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getStats(getLatestStatsDto: GetLatestStatsDto, user: UserData) {
-    const { productId, foremanId, fromDateTime, toDateTime } = getLatestStatsDto;
+    const { productId, foremanId, fromDateTime, toDateTime, employeeId } =
+      getLatestStatsDto;
     // const twoWeeksAgoDateTime = new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
 
     const where: Prisma.historyWhereInput = {
@@ -69,67 +85,131 @@ export class StatsService {
     if (foremanId) {
       where.employees = {
         foremanId,
-      }
+      };
     }
 
-    const latestHistory: HistoryWithProductsAndEmployees[] = await this.prisma.findManyPrivately('history', {
-      where,
-      select: {
-        employees: true,
-        products: true,
-        amount: true,
-        isPaid: true,
-      },
-      orderBy: {
-        dateTime: 'desc',
-      },
-    }, user);
+    if (employeeId) {
+      where.employeeId = employeeId;
+    }
 
-    const topEmployees = latestHistory
-      .reduce((acc: Stats['topEmployees'], history) => {
-        const employee = history.employees;
-        const employeeIndex = acc.findIndex(accEmployee => accEmployee.id === employee.id);
+    const latestHistory: HistoryWithProductsAndEmployees[] =
+      await this.prisma.findManyPrivately(
+        'history',
+        {
+          where,
+          select: {
+            employees: true,
+            products: true,
+            amount: true,
+            isPaid: true,
+          },
+          orderBy: {
+            dateTime: 'desc',
+          },
+        },
+        user,
+      );
 
-        history.amount = Number(history.amount);
+    // const topEmployees = latestHistory
+    //   .reduce((acc: Stats['topEmployees'], history) => {
+    //     const employee = history.employees;
+    //     const employeeIndex = acc.findIndex(
+    //       (accEmployee) => accEmployee.id === employee.id,
+    //     );
 
-        if (employeeIndex === -1) {
-          acc.push({
-            id: employee.id,
-            firstName: employee.firstName,
-            lastName: employee.lastName,
-            amount: history.amount,
-          });
-        } else {
-          acc[employeeIndex].amount += history.amount;
-        }
+    //     history.amount = Number(history.amount);
 
-        return acc;
-      }, [] as Stats['topEmployees']).sort((a, b) => b.amount - a.amount);
+    //     if (employeeIndex === -1) {
+    //       acc.push({
+    //         id: employee.id,
+    //         firstName: employee.firstName,
+    //         lastName: employee.lastName,
+    //         amount: history.amount,
+    //       });
+    //     } else {
+    //       acc[employeeIndex].amount += history.amount;
+    //     }
+
+    //     return acc;
+    //   }, [] as Stats['topEmployees'])
+    //   .sort((a, b) => b.amount - a.amount);
 
     const totalAmount = latestHistory.reduce((acc, history) => {
       acc += Number(history.amount);
       return acc;
     }, 0);
 
-    const unpaid = latestHistory.reduce((acc, history) => {
-      if (!history.isPaid) {
-        acc.amount += Number(history.amount);
-        acc.pay += Number(history.amount) * Number(history.products.productPrice);
-      }
-      return acc;
-    }, {
-      amount: 0,
-      pay: 0,
-    });
+    const unpaid = latestHistory.reduce(
+      (acc, history) => {
+        if (!history.isPaid) {
+          acc.amount += Number(history.amount);
+          acc.pay +=
+            Number(history.amount) * Number(history.products.productPrice);
+        }
+        return acc;
+      },
+      {
+        amount: 0,
+        pay: 0,
+      },
+    );
+
+    const amountPerProduct: AmountPerProduct[] = latestHistory.reduce(
+      (acc: AmountPerProduct[], history) => {
+        const product = history.products;
+        const productIndex = acc.findIndex(
+          (accProduct) => accProduct.product.id === product.id,
+        );
+
+        history.amount = Number(history.amount);
+
+        let topEmployees = acc[productIndex]?.topEmployees || [];
+
+        const employee = history.employees;
+
+        const employeeIndex = topEmployees.findIndex(
+          (accEmployee) => accEmployee.id === employee.id,
+        );
+
+        if (employeeIndex === -1) {
+          topEmployees.push({
+            id: employee.id,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            amount: history.amount,
+          });
+        } else {
+          topEmployees[employeeIndex].amount += history.amount;
+        }
+
+        topEmployees = topEmployees.sort((a, b) => b.amount - a.amount);
+
+        if (productIndex === -1) {
+          acc.push({
+            product,
+            amount: history.amount,
+            topEmployees,
+          });
+        } else {
+          acc[productIndex].amount += history.amount;
+        }
+
+        return acc;
+      },
+      [] as AmountPerProduct[],
+    );
 
     return {
-      topEmployees,
-      totalAmount,
+      amountPerProduct,
       unpaid,
     };
   }
 
-  async calcEmployee(employeeId: number, calcEmployeeDto: CalcEmployeeDto, user: UserData) {
+  async calcEmployee(
+    employeeId: number,
+    calcEmployeeDto: CalcEmployeeDto,
+    user: UserData,
+  ) {
     const { productId, fromDateTime, toDateTime, calcAll } = calcEmployeeDto;
 
     const where: Prisma.historyWhereInput = {
@@ -153,23 +233,29 @@ export class StatsService {
 
     if (toDateTime) {
       where.dateTime = {
-        ...(where.dateTime as Prisma.DateTimeFilter || {}),
+        ...((where.dateTime as Prisma.DateTimeFilter) || {}),
         lte: toDateTime,
       };
     }
 
-    const history: HistoryWithProductsPriceAndName[] = await this.prisma.findManyPrivately('history', {
-      where,
-      include: {
-        products: {
-          select: {
-            id: true,
-            productPrice: true,
-            productName: true,
-          }
-        }
-      },
-    }, user);
+    const history: HistoryWithProductsPriceAndName[] =
+      await this.prisma.findManyPrivately(
+        'history',
+        {
+          where,
+          include: {
+            products: {
+              select: {
+                id: true,
+                productPrice: true,
+                productUnit: true,
+                productName: true,
+              },
+            },
+          },
+        },
+        user,
+      );
 
     const calcEmployeeData: CalcEmployeeData = {
       totalAmount: 0,
@@ -177,24 +263,31 @@ export class StatsService {
       products: [],
     };
 
-    history.forEach(history => {
+    history.forEach((history) => {
       const product = history.products;
-      const productIndex = calcEmployeeData.products.findIndex(calcProduct => calcProduct.id === product.id);
+      const productIndex = calcEmployeeData.products.findIndex(
+        (calcProduct) => calcProduct.id === product.id,
+      );
 
       if (productIndex === -1) {
         calcEmployeeData.products.push({
           id: product.id,
           name: product.productName,
           amount: Number(history.amount),
+          unit: product.productUnit,
           pay: Number(history.amount) * Number(product.productPrice),
         });
       } else {
-        calcEmployeeData.products[productIndex].amount += Number(history.amount);
-        calcEmployeeData.products[productIndex].pay += Number(history.amount) * Number(product.productPrice);
+        calcEmployeeData.products[productIndex].amount += Number(
+          history.amount,
+        );
+        calcEmployeeData.products[productIndex].pay +=
+          Number(history.amount) * Number(product.productPrice);
       }
 
       calcEmployeeData.totalAmount += Number(history.amount);
-      calcEmployeeData.totalPay += Number(history.amount) * Number(product.productPrice);
+      calcEmployeeData.totalPay +=
+        Number(history.amount) * Number(product.productPrice);
     });
 
     return calcEmployeeData;

@@ -107,8 +107,6 @@ export class AuthService {
 
     const userData = JSON.parse(user) as Omit<users, 'id'>;
 
-    console.log(userData);
-
     const createdUser = await this.prisma.users.create({
       data: userData,
     });

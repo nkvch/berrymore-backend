@@ -1,21 +1,27 @@
-import { HttpException, HttpStatus, Injectable, Query } from "@nestjs/common";
-import { Prisma, employees } from "@prisma/client";
-import { UserData } from "src/auth/interfaces/UserData";
-import { PaginateOptions, PrismaService } from "src/prisma/prisma.service";
-import { S3Service } from "src/s3/s3.service";
+import { HttpException, HttpStatus, Injectable, Query } from '@nestjs/common';
+import { Prisma, employees } from '@prisma/client';
+import { UserData } from 'src/auth/interfaces/UserData';
+import { PaginateOptions, PrismaService } from 'src/prisma/prisma.service';
+import { S3Service } from 'src/s3/s3.service';
 import { v4 as uuidv4 } from 'uuid';
-import { EmployeeDto } from "./dto/employee.dto";
-import { hash } from "src/common/utils/hash";
-import { GetEmployeesDto } from "./dto/get-employees.dto";
-import { SelectType, searchMany } from "src/common/utils/searchMany";
-import { BulkUpdateEmployeesDto } from "./dto/bulk-upd-employees.dto";
-import { startOfDay } from "date-fns";
+import { EmployeeDto } from './dto/employee.dto';
+import { GetEmployeesDto } from './dto/get-employees.dto';
+import { SelectType, searchMany } from 'src/common/utils/searchMany';
+import { BulkUpdateEmployeesDto } from './dto/bulk-upd-employees.dto';
+import { startOfDay } from 'date-fns';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly prisma: PrismaService, private readonly s3: S3Service) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3: S3Service,
+  ) {}
 
-  async create(addEmployeeDto: EmployeeDto, user: UserData, photo: Express.Multer.File): Promise<employees> {
+  async create(
+    addEmployeeDto: EmployeeDto,
+    user: UserData,
+    photo: Express.Multer.File,
+  ): Promise<employees> {
     let photoPath: string | null = null;
 
     if (photo) {
@@ -23,9 +29,6 @@ export class EmployeesService {
     }
 
     const berryId = uuidv4();
-    const contractHash = hash(addEmployeeDto.contract);
-    const lastNameHash = hash(addEmployeeDto.lastName);
-    const phoneHash = hash(addEmployeeDto.phone);
 
     const { flags, ...empData } = addEmployeeDto;
 
@@ -36,18 +39,127 @@ export class EmployeesService {
     }
 
     try {
-      return this.prisma.createPrivately('employees', {
-        data: {
-          ...empData,
-          photoPath,
-          berryId,
-          contractHash,
-          lastNameHash,
-          phoneHash,
-          flags: {
-            connect: _flags.map(flag => ({ id: flag })),
-          }
-        } as any,
+      return this.prisma.createPrivately(
+        'employees',
+        {
+          data: {
+            ...empData,
+            photoPath,
+            berryId,
+            flags: {
+              connect: _flags.map((flag) => ({ id: flag })),
+            },
+          } as any,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            berryId: true,
+            contract: true,
+            phone: true,
+            address: true,
+            additionalInfo: true,
+          },
+        },
+        user,
+      );
+    } catch (err) {
+      if (photoPath) {
+        await this.s3.deleteFromS3(photoPath);
+      }
+      console.error(err);
+      throw new HttpException(
+        'Ошибка при создании сотрудника',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getEmployees(
+    getEmployeesDto: GetEmployeesDto,
+    pagOpts: PaginateOptions,
+    user: UserData,
+  ) {
+    const { search, foremanId, flagsPresent, flagsAbsent, hasShift, ids } =
+      getEmployeesDto;
+
+    const where: Prisma.employeesWhereInput = {
+      isArchived: false,
+    };
+
+    const AND: Prisma.Enumerable<Prisma.employeesWhereInput> = [];
+
+    if (foremanId) {
+      where.foremanId = foremanId;
+    }
+
+    if (search) {
+      const orClause = searchMany('employees', search, [
+        'firstName',
+        'lastName',
+        'contract',
+      ] as Array<keyof SelectType<'employees'>>);
+
+      AND.push(orClause);
+    }
+
+    if (flagsPresent) {
+      const flagsAndClause = flagsPresent.map((flag) => ({
+        flags: { some: { id: flag } },
+      }));
+      AND.push(...flagsAndClause);
+    }
+
+    if (flagsAbsent) {
+      const flagsAndClause = flagsAbsent.map((flag) => ({
+        flags: { none: { id: flag } },
+      }));
+      AND.push(...flagsAndClause);
+    }
+
+    if (hasShift) {
+      AND.push({
+        shifts: {
+          some: {
+            startDate: {
+              lte: startOfDay(new Date()),
+            },
+            endDate: {
+              gte: startOfDay(new Date()),
+            },
+          },
+        },
+      });
+    }
+
+    const OR: Prisma.Enumerable<Prisma.employeesWhereInput> = [];
+
+    if (AND.length > 0) {
+      OR.push({
+        AND,
+      });
+    }
+
+    if (ids) {
+      OR.push({
+        id: {
+          in: ids,
+        },
+      });
+    }
+
+    if (OR.length > 0) {
+      where.OR = OR;
+    }
+
+    return this.prisma.paginatePrivately(
+      'employees',
+      pagOpts,
+      {
+        where,
+        orderBy: {
+          lastName: 'asc',
+        },
         select: {
           id: true,
           firstName: true,
@@ -57,93 +169,30 @@ export class EmployeesService {
           phone: true,
           address: true,
           additionalInfo: true,
-        }
-      }, user);
-    } catch (err) {
-      if (photoPath) {
-        await this.s3.deleteFromS3(photoPath);
-      }
-      console.error(err);
-      throw new HttpException('Ошибка при создании сотрудника', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  async getEmployees(getEmployeesDto: GetEmployeesDto, pagOpts: PaginateOptions, user: UserData) {
-    const { search, foremanId, flagsPresent, flagsAbsent, hasShift } = getEmployeesDto;
-
-    const where: Prisma.employeesWhereInput = {
-      isArchived: false,
-      AND: [],
-    };
-
-    if (foremanId) {
-      where.foremanId = foremanId;
-    }
-
-    if (search) {
-      const searchHash = hash(search) as string;
-      const orClause = searchMany('employees', searchHash, ['lastNameHash', 'contractHash', 'phoneHash'] as Array<keyof SelectType<'employees'>>);
-
-      where.AND = [orClause];
-    }
-
-    if (flagsPresent) {
-      const flagsAndClause = flagsPresent.map(flag => ({ flags: { some: { id: flag } } }));
-      where.AND = [...where.AND as any, ...flagsAndClause];
-    }
-
-    if (flagsAbsent) {
-      const flagsAndClause = flagsAbsent.map(flag => ({ flags: { none: { id: flag } } }));
-      where.AND = [...where.AND as any, ...flagsAndClause];
-    }
-
-    if (hasShift) {
-      where.AND = [...where.AND as any, {
-        shifts: {
-          some: {
-            startDate: {
-              lte: startOfDay(new Date())
+          photoPath: true,
+          flags: true,
+          foreman: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
             },
-            endDate: {
-              gte: startOfDay(new Date())
-            }
-          }
-        }
-      }];
-    }
-
-    return this.prisma.paginatePrivately('employees', pagOpts, {
-      where,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        berryId: true,
-        contract: true,
-        phone: true,
-        address: true,
-        additionalInfo: true,
-        photoPath: true,
-        flags: true,
-        foreman: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          }
+          },
+          shifts: {
+            where: {
+              startDate: {
+                lte: startOfDay(new Date()),
+              },
+              endDate: {
+                gte: startOfDay(new Date()),
+              },
+            },
+          },
         },
-        shifts: {
-          where: {
-            startDate: {
-              lte: startOfDay(new Date()),
-            },
-            endDate: {
-              gte: startOfDay(new Date()),
-            }
-          }
-        }
-      }
-    }, user, { foremanLimited: true });
+      },
+      user,
+      { foremanLimited: true },
+    );
   }
 
   async getEmployeeById(id: number, user: UserData) {
@@ -151,34 +200,39 @@ export class EmployeesService {
       id,
     };
 
-    return this.prisma.findUniquePrivately('employees', {
-      where,
-      select: {
-        id: true,
-        contract: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        address: true,
-        additionalInfo: true,
-        photoPath: true,
-        foreman: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          }
+    return this.prisma.findUniquePrivately(
+      'employees',
+      {
+        where,
+        select: {
+          id: true,
+          contract: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          address: true,
+          additionalInfo: true,
+          photoPath: true,
+          foreman: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          flags: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+            },
+          },
         },
-        flags: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-          }
-        }
-      }
-    }, user, { foremanLimited: true });
+      },
+      user,
+      { foremanLimited: true },
+    );
   }
 
   async getEmployeeByBerryId(berryId: string, user: UserData) {
@@ -186,23 +240,38 @@ export class EmployeesService {
       berryId,
     };
 
-    return this.prisma.findFirstPrivately('employees', {
-      where,
-      include: {
-        flags: true,
-      }
-    }, user, { foremanLimited: true });
+    return this.prisma.findFirstPrivately(
+      'employees',
+      {
+        where,
+        include: {
+          flags: true,
+        },
+      },
+      user,
+      { foremanLimited: true },
+    );
   }
 
-  async updateEmployee(id: number, employeeDto: EmployeeDto, user: UserData, photo: Express.Multer.File) {
+  async updateEmployee(
+    id: number,
+    employeeDto: EmployeeDto,
+    user: UserData,
+    photo: Express.Multer.File,
+  ) {
     const { flags, ...empData } = employeeDto;
 
-    const existingEmployee = await this.prisma.findUniquePrivately('employees', {
-      where: { id },
-      include: {
-        flags: true,
-      }
-    }, user, { foremanLimited: true });
+    const existingEmployee = await this.prisma.findUniquePrivately(
+      'employees',
+      {
+        where: { id },
+        include: {
+          flags: true,
+        },
+      },
+      user,
+      { foremanLimited: true },
+    );
 
     let photoPath: string | null = null;
 
@@ -214,45 +283,53 @@ export class EmployeesService {
       await this.s3.deleteFromS3(existingEmployee.photoPath);
     }
 
-    const contractHash = hash(employeeDto.contract);
-    const lastNameHash = hash(employeeDto.lastName);
-
     if (user.roleName === 'foreman') {
       empData.foremanId = user.id;
     }
 
     try {
-      return this.prisma.updatePrivately('employees', {
-        where: {
-          id,
+      return this.prisma.updatePrivately(
+        'employees',
+        {
+          where: {
+            id,
+          },
+          data: {
+            ...empData,
+            photoPath,
+            flags: {
+              set: flags.map((flag) => ({ id: flag })),
+            },
+          } as any,
         },
-        data: {
-          ...empData,
-          photoPath,
-          contractHash,
-          lastNameHash,
-          flags: {
-            set: flags.map(flag => ({ id: flag })),
-          }
-        } as any,
-      }, user, { foremanLimited: true });
+        user,
+        { foremanLimited: true },
+      );
     } catch (err) {
       console.error(err);
-      throw new HttpException('Ошибка при обновлении сотрудника', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Ошибка при обновлении сотрудника',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async deleteEmployee(id: number, user: UserData) {
-    const deletedEmployee = await this.prisma.deletePrivately('employees', {
-      where: {
-        id,
+    const deletedEmployee = await this.prisma.deletePrivately(
+      'employees',
+      {
+        where: {
+          id,
+        },
+        select: {
+          firstName: true,
+          lastName: true,
+          photoPath: true,
+        },
       },
-      select: {
-        firstName: true,
-        lastName: true,
-        photoPath: true,
-      },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
     if (deletedEmployee.photoPath) {
       await this.s3.deleteFromS3(deletedEmployee.photoPath);
@@ -262,98 +339,147 @@ export class EmployeesService {
   }
 
   async hasEmployeeShiftsOrHistory(id: number, user: UserData) {
-    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, { foremanLimited: true });
+    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, {
+      foremanLimited: true,
+    });
 
     if (!hasAccessToEmp) {
       throw new HttpException('Нет доступа к сотруднику', HttpStatus.FORBIDDEN);
     }
 
-    const shifts = await this.prisma.countPrivately('shifts', {
-      where: {
-        employees: {
-          id,
+    const shifts = await this.prisma.countPrivately(
+      'shifts',
+      {
+        where: {
+          employees: {
+            id,
+          },
         },
       },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
-    const history = await this.prisma.countPrivately('history', {
-      where: {
-        employeeId: id,
+    const history = await this.prisma.countPrivately(
+      'history',
+      {
+        where: {
+          employeeId: id,
+        },
       },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
     return {
       hasShifts: shifts > 0,
       hasHistory: history > 0,
-    }
+    };
   }
 
   async deleteAllEmployeeShiftsAndHistory(id: number, user: UserData) {
-    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, { foremanLimited: true });
+    const hasAccessToEmp = await this.prisma.hasAccess('employees', id, user, {
+      foremanLimited: true,
+    });
 
     if (!hasAccessToEmp) {
       throw new HttpException('Нет доступа к сотруднику', HttpStatus.FORBIDDEN);
     }
 
-    await this.prisma.deleteManyPrivately('shifts', {
-      where: {
-        employees: {
-          id,
+    await this.prisma.deleteManyPrivately(
+      'shifts',
+      {
+        where: {
+          employees: {
+            id,
+          },
         },
       },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
-    await this.prisma.deleteManyPrivately('history', {
-      where: {
-        employeeId: id,
+    await this.prisma.deleteManyPrivately(
+      'history',
+      {
+        where: {
+          employeeId: id,
+        },
       },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
     return {
       success: true,
-    }
+    };
   }
 
-  async bulkUpdateEmployeesFlags(employeeDto: BulkUpdateEmployeesDto, user: UserData) {
+  async bulkUpdateEmployeesFlags(
+    employeeDto: BulkUpdateEmployeesDto,
+    user: UserData,
+  ) {
     const { ids, setFlags, removeFlags } = employeeDto;
 
-    const myEmployeesNumber = await this.prisma.countPrivately('employees', {
-      where: {
-        id: {
-          in: ids,
+    const myEmployeesNumber = await this.prisma.countPrivately(
+      'employees',
+      {
+        where: {
+          id: {
+            in: ids,
+          },
         },
       },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
 
     if (myEmployeesNumber !== ids.length) {
-      throw new HttpException('Некоторые сотрудники не принадлежат вам', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Некоторые сотрудники не принадлежат вам',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     //@TODO: one day in the future, should be done in transaction
-    return Promise.all(ids.map(id => this.prisma.updatePrivately('employees', {
-      where: {
-        id,
-      },
-      data: {
-        flags: {
-          connect: setFlags.map(flag => ({ id: flag })),
-          disconnect: removeFlags.map(flag => ({ id: flag })),
-        },
-      },
-      select: {
-        id: true,
-      }
-    }, user, { foremanLimited: true })));
+    return Promise.all(
+      ids.map((id) =>
+        this.prisma.updatePrivately(
+          'employees',
+          {
+            where: {
+              id,
+            },
+            data: {
+              flags: {
+                connect: setFlags.map((flag) => ({ id: flag })),
+                disconnect: removeFlags.map((flag) => ({ id: flag })),
+              },
+            },
+            select: {
+              id: true,
+            },
+          },
+          user,
+          { foremanLimited: true },
+        ),
+      ),
+    );
   }
 
   async archiveEmployee(id: number, user: UserData) {
-    return this.prisma.updatePrivately('employees', {
-      where: {
-        id,
+    return this.prisma.updatePrivately(
+      'employees',
+      {
+        where: {
+          id,
+        },
+        data: {
+          isArchived: true,
+        },
       },
-      data: {
-        isArchived: true,
-      },
-    }, user, { foremanLimited: true });
+      user,
+      { foremanLimited: true },
+    );
   }
 }

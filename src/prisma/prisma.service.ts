@@ -98,7 +98,6 @@ export class PrismaService extends PrismaClient {
     });
 
     this.roles.count().then((count) => {
-      console.log('roles count', count);
       const hasAny = count > 0;
 
       if (!hasAny) {

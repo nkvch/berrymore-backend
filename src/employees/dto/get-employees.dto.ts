@@ -5,8 +5,8 @@ import { NumberFromString } from 'src/common/decorators/number-from-string.decor
 
 export class GetEmployeesDto {
   @IsOptional()
-  @NumberFromString({ message: 'Неправильно указано ID' })
-  id: number;
+  @IdsList({ message: 'Неправильно указаны ID' })
+  ids: number[];
   @IsOptional()
   @IsString({ message: 'Неправильный запрос' })
   search: string;

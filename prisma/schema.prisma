@@ -9,9 +9,9 @@ datasource db {
 
 model employees {
   id                             Int       @id @default(autoincrement())
-  contract                       String    @db.VarChar(255)
-  firstName                      String    @db.VarChar(255)
-  lastName                       String    @db.VarChar(255)
+  contract                       String    @db.VarChar(64)
+  firstName                      String    @db.VarChar(64)
+  lastName                       String    @db.VarChar(64)
   address                        String?   @db.VarChar(255)
   ownerId                        Int
   phone                          String?   @db.VarChar(255)
@@ -19,9 +19,6 @@ model employees {
   foremanId                      Int
   berryId                        String    @db.VarChar(255)
   photoPath                      String?   @db.VarChar(1024)
-  contractHash                   String    @db.VarChar(1024)
-  lastNameHash                   String    @db.VarChar(1024)
-  phoneHash                      String?   @db.VarChar(1024)
   salt                           String    @db.VarChar(255)
   iv                             String    @db.VarChar(255)
   users_employees_ownerIdTousers users     @relation("employees_ownerIdTousers", fields: [ownerId], references: [id], onDelete: NoAction, map: "employees_ibfk_1")
@@ -31,24 +28,10 @@ model employees {
   flags                          flags[]   @relation("employees_flags")
   isArchived                     Boolean   @default(false)
 
-  @@index([contractHash], map: "employees_contractHash")
   @@index([id], map: "employees_flags_flag_id_idx")
   @@index([foremanId], map: "employees_foreman_fkey")
-  @@index([lastNameHash], map: "employees_lastNameHash")
   @@index([ownerId], map: "employees_owner_fkey")
-  @@index([phoneHash], map: "employees_phoneHash")
 }
-
-// model employees_flags {
-//   employeeId Int
-//   flagId     Int
-//   employees  employees @relation(fields: [employeeId], references: [id], onDelete: Cascade, map: "employees_flags_ibfk_1")
-//   flags      flags     @relation(fields: [flagId], references: [id], onDelete: Cascade, map: "employees_flags_ibfk_2")
-
-//   @@id([employeeId, flagId])
-//   @@unique([employeeId, flagId], map: "employees_flags_flagId_employeeId_unique")
-//   @@index([flagId], map: "flagId")
-// }
 
 model flags {
   id        Int         @id @default(autoincrement())
@@ -84,6 +67,7 @@ model history {
 model products {
   id           Int       @id @default(autoincrement())
   productName  String    @unique(map: "productName") @db.VarChar(255)
+  productUnit  String    @default("кг") @db.VarChar(255)
   productPrice String    @db.VarChar(255)
   photoPath    String?   @db.VarChar(255)
   ownerId      Int

@@ -1,16 +1,22 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
-import { products } from "@prisma/client";
-import { UserData } from "src/auth/interfaces/UserData";
-import { PaginateOptions, PrismaService } from "src/prisma/prisma.service";
-import { S3Service } from "src/s3/s3.service";
-import { ProductDto } from "./dto/product.dto";
-
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { products } from '@prisma/client';
+import { UserData } from 'src/auth/interfaces/UserData';
+import { PaginateOptions, PrismaService } from 'src/prisma/prisma.service';
+import { S3Service } from 'src/s3/s3.service';
+import { ProductDto } from './dto/product.dto';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService, private readonly s3: S3Service) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3: S3Service,
+  ) {}
 
-  async create(addProductDto: ProductDto, user: UserData, photo: Express.Multer.File): Promise<products> {
+  async create(
+    addProductDto: ProductDto,
+    user: UserData,
+    photo: Express.Multer.File,
+  ): Promise<products> {
     let photoPath: string | null = null;
 
     if (photo) {
@@ -18,18 +24,25 @@ export class ProductsService {
     }
 
     try {
-      return this.prisma.createPrivately('products', {
-        data: {
-          ...addProductDto,
-          photoPath,
-        } as any,
-      }, user);
+      return this.prisma.createPrivately(
+        'products',
+        {
+          data: {
+            ...addProductDto,
+            photoPath,
+          } as any,
+        },
+        user,
+      );
     } catch (err) {
       if (photoPath) {
         await this.s3.deleteFromS3(photoPath);
       }
       console.error(err);
-      throw new HttpException('Ошибка при создании продукта', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Ошибка при создании продукта',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -38,17 +51,30 @@ export class ProductsService {
   }
 
   async getProduct(productId: products['id'], user: UserData) {
-    return this.prisma.findUniquePrivately('products', {
-      where: {
-        id: productId,
+    return this.prisma.findUniquePrivately(
+      'products',
+      {
+        where: {
+          id: productId,
+        },
       },
-    }, user);
+      user,
+    );
   }
 
-  async updateProduct(id: products['id'], updateProductDto: ProductDto, user: UserData, photo: Express.Multer.File) {
-    const existingProduct = await this.prisma.findUniquePrivately('products', {
-      where: { id },
-    }, user);
+  async updateProduct(
+    id: products['id'],
+    updateProductDto: ProductDto,
+    user: UserData,
+    photo: Express.Multer.File,
+  ) {
+    const existingProduct = await this.prisma.findUniquePrivately(
+      'products',
+      {
+        where: { id },
+      },
+      user,
+    );
 
     let photoPath: string | null = null;
 
@@ -61,37 +87,52 @@ export class ProductsService {
     }
 
     try {
-      return this.prisma.updatePrivately('products', {
-        where: {
-          id,
+      return this.prisma.updatePrivately(
+        'products',
+        {
+          where: {
+            id,
+          },
+          data: {
+            ...updateProductDto,
+            photoPath,
+          } as any,
         },
-        data: {
-          ...updateProductDto,
-          photoPath,
-        } as any,
-      }, user);
+        user,
+      );
     } catch (err) {
       if (photoPath) {
         await this.s3.deleteFromS3(photoPath);
       }
       console.error(err);
-      throw new HttpException('Ошибка при обновлении продукта', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Ошибка при обновлении продукта',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async deleteProduct(id: products['id'], user: UserData) {
-    const existingProduct = await this.prisma.findUniquePrivately('products', {
-      where: { id },
-    }, user);
+    const existingProduct = await this.prisma.findUniquePrivately(
+      'products',
+      {
+        where: { id },
+      },
+      user,
+    );
 
     if (existingProduct.photoPath) {
       await this.s3.deleteFromS3(existingProduct.photoPath);
     }
 
-    return this.prisma.deletePrivately('products', {
-      where: {
-        id,
+    return this.prisma.deletePrivately(
+      'products',
+      {
+        where: {
+          id,
+        },
       },
-    }, user);
+      user,
+    );
   }
 }

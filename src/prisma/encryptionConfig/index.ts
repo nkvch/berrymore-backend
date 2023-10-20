@@ -80,7 +80,7 @@ export const encryptionConfig: EncryptionConfig = {
       if (!data) return false;
 
       return !!data.iv && !!data.salt;
-    }
+    },
   },
   flags: {
     shouldEncrypt: () => Promise.resolve(true),
@@ -93,15 +93,7 @@ export const encryptionConfig: EncryptionConfig = {
   },
   employees: {
     shouldEncrypt: () => Promise.resolve(true),
-    fields: [
-      'firstName',
-      'lastName',
-      'photoPath',
-      'contract',
-      'address',
-      'phone',
-      'additionalInfo',
-    ],
+    fields: ['photoPath', 'address', 'phone', 'additionalInfo'],
     shouldDecrypt: (data: Record<string, string | number>) => {
       if (!data) return false;
 
@@ -110,7 +102,7 @@ export const encryptionConfig: EncryptionConfig = {
   },
   products: {
     shouldEncrypt: () => Promise.resolve(true),
-    fields: ['productName', 'productPrice', 'photoPath'],
+    fields: ['productName', 'productUnit', 'productPrice', 'photoPath'],
     shouldDecrypt: (data: Record<string, string | number>) => {
       if (!data) return false;
 
@@ -124,6 +116,6 @@ export const encryptionConfig: EncryptionConfig = {
       if (!data) return false;
 
       return !!data.iv && !!data.salt;
-    }
-  }
+    },
+  },
 };
